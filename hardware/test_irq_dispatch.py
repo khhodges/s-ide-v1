@@ -225,19 +225,231 @@ def test_irq_dispatch_lazy_resolve():
 
 
 # ---------------------------------------------------------------------------
+# Sub-test 4: Simultaneous trigger during FETCH_NS stall
+#
+# Scenario: TIMER dispatch is already in FETCH_NS (waiting for mem_rd_valid).
+# A second start pulse arrives with LAZY_LOAD reason.  The FSM is not in IDLE
+# so the second trigger must be silently ignored — no DR/NIA corruption.
+# ---------------------------------------------------------------------------
+
+def test_irq_dispatch_simultaneous_fetch_ns():
+    """Second IRQ fires during FETCH_NS stall → held off, first dispatch intact."""
+    dut = ChurchIRQDispatch()
+    INTRUDING_SLOT = 7   # slot carried by the second (spurious) start
+
+    async def testbench(ctx):
+        ctx.set(dut.mem_rd_valid, 0)
+        ctx.set(dut.mem_rd_data, 0)
+        ctx.set(dut.cr15_namespace["word1_location"], NS_TABLE_BASE)
+
+        # --- Start first dispatch: TIMER, slot=0 ---
+        ctx.set(dut.irq_reason, IRQ_REASON_TIMER)
+        ctx.set(dut.irq_slot, 0)
+        ctx.set(dut.start, 1)
+        await ctx.tick()
+        ctx.set(dut.start, 0)
+
+        assert ctx.get(dut.busy) == 1, "busy must be 1 after first start"
+
+        # FSM is now in FETCH_NS, waiting for mem_rd_valid.
+        # Assert mem_rd_en and correct NS address before injecting second trigger.
+        assert ctx.get(dut.mem_rd_en) == 1, "FETCH_NS: mem_rd_en not asserted"
+        addr_ns = ctx.get(dut.mem_rd_addr)
+        assert addr_ns == IRQ_NS_ADDR, (
+            f"FETCH_NS: expected {IRQ_NS_ADDR:#x}, got {addr_ns:#x}"
+        )
+
+        # --- Inject second start (LAZY_LOAD) while still in FETCH_NS stall ---
+        ctx.set(dut.irq_reason, IRQ_REASON_LAZY_LOAD)
+        ctx.set(dut.irq_slot, INTRUDING_SLOT)
+        ctx.set(dut.start, 1)
+        # busy must still be asserted — re-entry is blocked
+        assert ctx.get(dut.busy) == 1, (
+            "busy must remain 1 during second start pulse (re-entry prevention)"
+        )
+        await ctx.tick()
+        ctx.set(dut.start, 0)
+        # Restore inputs to first dispatch values to confirm latch is not overwritten
+        ctx.set(dut.irq_reason, IRQ_REASON_TIMER)
+        ctx.set(dut.irq_slot, 0)
+
+        # --- Service FETCH_NS for the original dispatch ---
+        ctx.set(dut.mem_rd_data, SCHED_LUMP_BASE)
+        ctx.set(dut.mem_rd_valid, 1)
+        await ctx.tick()
+        ctx.set(dut.mem_rd_valid, 0)
+
+        # --- Service FETCH_METHOD ---
+        assert ctx.get(dut.mem_rd_en) == 1, "FETCH_METHOD: mem_rd_en not asserted"
+        addr_method = ctx.get(dut.mem_rd_addr)
+        assert addr_method == METHOD_ADDR, (
+            f"FETCH_METHOD: expected {METHOD_ADDR:#x}, got {addr_method:#x}"
+        )
+        ctx.set(dut.mem_rd_data, METHOD_ENTRY)
+        ctx.set(dut.mem_rd_valid, 1)
+        await ctx.tick()
+        ctx.set(dut.mem_rd_valid, 0)
+        ctx.set(dut.mem_rd_data, 0)
+
+        # --- WRITE_DR0: must carry TIMER reason (not LAZY_LOAD from second pulse) ---
+        dr_en   = ctx.get(dut.dr_wr_en)
+        dr0_val = ctx.get(dut.dr_wr_data)
+        assert dr_en == 1, "WRITE_DR0: dr_wr_en not asserted"
+        assert dr0_val == IRQ_REASON_TIMER, (
+            f"DR0 corrupted by second IRQ — expected {IRQ_REASON_TIMER} "
+            f"(TIMER), got {dr0_val}"
+        )
+        await ctx.tick()
+
+        # --- WRITE_DR1: must carry slot=0 (not INTRUDING_SLOT) ---
+        dr1_en  = ctx.get(dut.dr1_wr_en)
+        dr1_val = ctx.get(dut.dr1_wr_data)
+        assert dr1_en == 1, "WRITE_DR1: dr1_wr_en not asserted"
+        assert dr1_val == 0, (
+            f"DR1 corrupted by second IRQ — expected slot=0, got {dr1_val}"
+        )
+        await ctx.tick()
+
+        # --- COMPLETE: NIA must be from first dispatch ---
+        nia_set_val = ctx.get(dut.nia_set)
+        nia_val     = ctx.get(dut.nia_value)
+        assert nia_set_val == 1, "nia_set not asserted in COMPLETE"
+        assert nia_val == EXPECTED_NIA, (
+            f"NIA corrupted — expected {EXPECTED_NIA:#x}, got {nia_val:#x}"
+        )
+        await ctx.tick()
+
+        assert ctx.get(dut.busy) == 0, "busy must clear after COMPLETE→IDLE"
+        print(f"  PASS: busy held during FETCH_NS second-start; "
+              f"DR0={dr0_val} (TIMER), DR1={dr1_val} (slot=0), "
+              f"NIA={nia_val:#x} — no corruption")
+
+    sim = Simulator(dut)
+    sim.add_clock(1e-6)
+    sim.add_testbench(testbench)
+    with sim.write_vcd("/dev/null"):
+        sim.run()
+    print("PASS: test_irq_dispatch_simultaneous_fetch_ns")
+
+
+# ---------------------------------------------------------------------------
+# Sub-test 5: Simultaneous trigger during FETCH_METHOD stall
+#
+# Scenario: TIMER dispatch has already passed FETCH_NS and is now waiting in
+# FETCH_METHOD.  A second start pulse (LAZY_RESOLVE) arrives.  Same
+# expectation: busy prevents re-entry, first dispatch values preserved.
+# ---------------------------------------------------------------------------
+
+def test_irq_dispatch_simultaneous_fetch_method():
+    """Second IRQ fires during FETCH_METHOD stall → held off, first dispatch intact."""
+    dut = ChurchIRQDispatch()
+    INTRUDING_SLOT = 3   # c-list slot index carried by the second (spurious) start
+
+    async def testbench(ctx):
+        ctx.set(dut.mem_rd_valid, 0)
+        ctx.set(dut.mem_rd_data, 0)
+        ctx.set(dut.cr15_namespace["word1_location"], NS_TABLE_BASE)
+
+        # --- Start first dispatch: LAZY_LOAD, slot=9 ---
+        ctx.set(dut.irq_reason, IRQ_REASON_LAZY_LOAD)
+        ctx.set(dut.irq_slot, 9)
+        ctx.set(dut.start, 1)
+        await ctx.tick()
+        ctx.set(dut.start, 0)
+
+        assert ctx.get(dut.busy) == 1, "busy must be 1 after first start"
+
+        # --- Service FETCH_NS ---
+        assert ctx.get(dut.mem_rd_en) == 1, "FETCH_NS: mem_rd_en not asserted"
+        ctx.set(dut.mem_rd_data, SCHED_LUMP_BASE)
+        ctx.set(dut.mem_rd_valid, 1)
+        await ctx.tick()
+        ctx.set(dut.mem_rd_valid, 0)
+
+        # FSM is now in FETCH_METHOD, waiting for mem_rd_valid.
+        assert ctx.get(dut.mem_rd_en) == 1, "FETCH_METHOD: mem_rd_en not asserted"
+        addr_method = ctx.get(dut.mem_rd_addr)
+        assert addr_method == METHOD_ADDR, (
+            f"FETCH_METHOD: expected {METHOD_ADDR:#x}, got {addr_method:#x}"
+        )
+
+        # --- Inject second start (LAZY_RESOLVE) during FETCH_METHOD stall ---
+        ctx.set(dut.irq_reason, IRQ_REASON_LAZY_RESOLVE)
+        ctx.set(dut.irq_slot, INTRUDING_SLOT)
+        ctx.set(dut.start, 1)
+        assert ctx.get(dut.busy) == 1, (
+            "busy must remain 1 during second start in FETCH_METHOD (re-entry prevention)"
+        )
+        await ctx.tick()
+        ctx.set(dut.start, 0)
+        ctx.set(dut.irq_reason, IRQ_REASON_LAZY_LOAD)
+        ctx.set(dut.irq_slot, 9)
+
+        # --- Service FETCH_METHOD for the original dispatch ---
+        ctx.set(dut.mem_rd_data, METHOD_ENTRY)
+        ctx.set(dut.mem_rd_valid, 1)
+        await ctx.tick()
+        ctx.set(dut.mem_rd_valid, 0)
+        ctx.set(dut.mem_rd_data, 0)
+
+        # --- WRITE_DR0: must be LAZY_LOAD (not LAZY_RESOLVE from second pulse) ---
+        dr_en   = ctx.get(dut.dr_wr_en)
+        dr0_val = ctx.get(dut.dr_wr_data)
+        assert dr_en == 1, "WRITE_DR0: dr_wr_en not asserted"
+        assert dr0_val == IRQ_REASON_LAZY_LOAD, (
+            f"DR0 corrupted by second IRQ — expected {IRQ_REASON_LAZY_LOAD} "
+            f"(LAZY_LOAD), got {dr0_val}"
+        )
+        await ctx.tick()
+
+        # --- WRITE_DR1: must carry slot=9 (not INTRUDING_SLOT=3) ---
+        dr1_en  = ctx.get(dut.dr1_wr_en)
+        dr1_val = ctx.get(dut.dr1_wr_data)
+        assert dr1_en == 1, "WRITE_DR1: dr1_wr_en not asserted"
+        assert dr1_val == 9, (
+            f"DR1 corrupted by second IRQ — expected slot=9, got {dr1_val}"
+        )
+        await ctx.tick()
+
+        # --- COMPLETE: NIA must be correct ---
+        nia_set_val = ctx.get(dut.nia_set)
+        nia_val     = ctx.get(dut.nia_value)
+        assert nia_set_val == 1, "nia_set not asserted in COMPLETE"
+        assert nia_val == EXPECTED_NIA, (
+            f"NIA corrupted — expected {EXPECTED_NIA:#x}, got {nia_val:#x}"
+        )
+        await ctx.tick()
+
+        assert ctx.get(dut.busy) == 0, "busy must clear after COMPLETE→IDLE"
+        print(f"  PASS: busy held during FETCH_METHOD second-start; "
+              f"DR0={dr0_val} (LAZY_LOAD), DR1={dr1_val} (slot=9), "
+              f"NIA={nia_val:#x} — no corruption")
+
+    sim = Simulator(dut)
+    sim.add_clock(1e-6)
+    sim.add_testbench(testbench)
+    with sim.write_vcd("/dev/null"):
+        sim.run()
+    print("PASS: test_irq_dispatch_simultaneous_fetch_method")
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
 def main():
     print("=" * 60)
-    print("ChurchIRQDispatch Cross-Check Tests (Task #1523)")
-    print("Three conditions → ELOADCALL to Scheduler.IRQ (NS slot 8)")
+    print("ChurchIRQDispatch Cross-Check Tests")
+    print("Three trigger conditions + simultaneous-trigger stall tests")
+    print("→ ELOADCALL to Scheduler.IRQ (NS slot 8)")
     print("=" * 60)
 
     tests = [
         test_irq_dispatch_timer,
         test_irq_dispatch_lazy_load,
         test_irq_dispatch_lazy_resolve,
+        test_irq_dispatch_simultaneous_fetch_ns,
+        test_irq_dispatch_simultaneous_fetch_method,
     ]
     passed = 0
     failed = 0
