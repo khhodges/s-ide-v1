@@ -16,19 +16,6 @@
 
 set -euo pipefail
 
-# ── Self-bootstrap: pull latest before doing anything ─────────────────────────
-# Keeps the script current without a manual git pull.
-# Skip if _FM_BOOTSTRAPPED=1 (set by the re-exec below).
-if [ "${_FM_BOOTSTRAPPED:-0}" = "0" ]; then
-    _SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
-    _ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-    cd "$_ROOT"
-    git fetch origin --quiet
-    git reset --hard origin/main --quiet
-    export _FM_BOOTSTRAPPED=1
-    exec bash "$_SELF" "$@"
-fi
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DROPLET="165.227.190.84"
