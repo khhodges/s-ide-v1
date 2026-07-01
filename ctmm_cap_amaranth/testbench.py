@@ -40,12 +40,41 @@ def encode_church(church_op, cr_dst=0, cr_src=0, index=0):
     # church_op[3]   → rd[4]  at bit[11]  (free: cr_dst only uses bits[10:7])
     # Opcodes 0-7 (LOAD..LAMBDA): bit[11]=0, unchanged encoding.
     # Opcodes 8-9 (ELOADCALL, XLOADLAMBDA): bit[11]=1, funct3=0 or 1.
+    # NOTE: Do NOT use this for ELOADCALL — use encode_eloadcall() instead, which
+    # applies the R-type layout required to carry a 7-bit method index.
     instr = CHURCH_CUSTOM0
     instr |= (cr_dst & 0xF) << 7
     instr |= ((church_op >> 3) & 0x1) << 11   # church_op bit[3] → rd[4] = instr[11]
     instr |= (church_op & 0x7) << 12           # church_op bits[2:0] → funct3
     instr |= (cr_src & 0xF) << 15
     instr |= (index & 0xFFF) << 20
+    return instr
+
+
+def encode_eloadcall(cr_dst=0, cr_src=0, method_index=0, row=0):
+    """Encode an ELOADCALL instruction using the R-type layout.
+
+    ELOADCALL (church_op=8 = 0b1000): bit[11]=1, funct3=0b000.
+
+    Field layout:
+      funct7[6:0] = instr[31:25] = method_index (7 bits, 0-127)
+      rs2[4:0]    = instr[24:20] = c-list row    (5 bits, 0-31)
+      rs1[3:0]    = instr[18:15] = cr_src
+      rd[3:0]     = instr[10:7]  = cr_dst
+      bit[11]     = 1            (church_op bit 3)
+      funct3      = 0b000        (church_op bits [2:0] for ELOADCALL)
+
+    This R-type encoding provides a full 7-bit method index (0-127), matching the
+    native hardware decoder's imm15[14:8] field and eliminating the former 4-bit
+    I-type limit of 16 methods.
+    """
+    instr = CHURCH_CUSTOM0
+    instr |= (cr_dst & 0xF) << 7
+    instr |= 1 << 11                        # church_op bit[3] = 1  (opcode 8 >= 8)
+    instr |= 0b000 << 12                    # funct3 = ELOADCALL lower 3 bits = 0
+    instr |= (cr_src & 0xF) << 15
+    instr |= (row & 0x1F) << 20             # rs2 = c-list row (5 bits)
+    instr |= (method_index & 0x7F) << 25    # funct7 = method index (7 bits)
     return instr
 
 
@@ -1417,9 +1446,12 @@ def test_decoder_eloadcall_xloadlambda():
     ELOADCALL  (8 = 0b1000): bit[11]=1, funct3=0b000
     XLOADLAMBDA(9 = 0b1001): bit[11]=1, funct3=0b001
 
-    ELOADCALL split-immediate mirrors hardware/decoder.py:
-      imm12[7:0]  (bits[27:20]) → eloadcall_row
-      imm12[11:8] (bits[31:28]) → eloadcall_method_index
+    ELOADCALL uses R-type encoding (matches hardware/decoder.py's 7-bit field):
+      funct7[6:0] (instr[31:25]) → eloadcall_method_index  (7 bits, 0-127)
+      rs2[4:0]    (instr[24:20]) → eloadcall_row            (5 bits, 0-31)
+
+    Test D specifically encodes method_index=20 (> 15) to verify the former 4-bit
+    I-type truncation is fixed and abstractions with > 16 methods decode correctly.
 
     Uses the generator-based add_process + Settle() API because CMCapDecoder is
     purely combinatorial (no sync domain, so add_clock / async testbench cannot
@@ -1428,15 +1460,16 @@ def test_decoder_eloadcall_xloadlambda():
     dut = CMCapDecoder()
     results = {}
 
-    # ── Test A: ELOADCALL (opcode 8) ─────────────────────────────────────────
-    # Encode: cr_dst=2, cr_src=3, imm12=0xA5C
-    #   row          = imm12[7:0]  = 0x5C = 92
-    #   method_index = imm12[11:8] = 0xA  = 10
-    EL_CR_DST = 2
-    EL_CR_SRC = 3
-    EL_IMM12  = 0xA5C   # method_index=0xA, row=0x5C
-    eloadcall_instr = encode_church(
-        int(ChurchOpcode.ELOADCALL), cr_dst=EL_CR_DST, cr_src=EL_CR_SRC, index=EL_IMM12
+    # ── Test A: ELOADCALL (opcode 8) — R-type encoding ───────────────────────
+    # Encode via encode_eloadcall(): cr_dst=2, cr_src=3, method_index=10, row=28
+    #   eloadcall_row          = rs2    = instr[24:20] = 28  (0x1C)
+    #   eloadcall_method_index = funct7 = instr[31:25] = 10  (0x0A)
+    EL_CR_DST      = 2
+    EL_CR_SRC      = 3
+    EL_METHOD      = 10    # method index
+    EL_ROW         = 28    # c-list row (≤ 31, fits in 5-bit rs2)
+    eloadcall_instr = encode_eloadcall(
+        cr_dst=EL_CR_DST, cr_src=EL_CR_SRC, method_index=EL_METHOD, row=EL_ROW
     )
 
     # ── Test B: XLOADLAMBDA (opcode 9) ────────────────────────────────────────
@@ -1450,6 +1483,17 @@ def test_decoder_eloadcall_xloadlambda():
 
     # ── Test C: backward-compat — LAMBDA (opcode 7) must still decode as 7 ───
     lambda_instr_c = encode_church(int(ChurchOpcode.LAMBDA), cr_dst=1, cr_src=2)
+
+    # ── Test D: method_index > 15 — proves the former 4-bit truncation is gone ──
+    # method_index=20 (0x14) would have been silently truncated to 4 (0x04) with
+    # the old I-type encoding; the new 7-bit funct7 field must preserve it intact.
+    D_METHOD = 20    # 0x14 — would overflow a 4-bit field (old max was 15)
+    D_ROW    = 7
+    D_CR_DST = 1
+    D_CR_SRC = 4
+    eloadcall_instr_d = encode_eloadcall(
+        cr_dst=D_CR_DST, cr_src=D_CR_SRC, method_index=D_METHOD, row=D_ROW
+    )
 
     def decoder_process():
         # ── Test A ──
@@ -1491,6 +1535,20 @@ def test_decoder_eloadcall_xloadlambda():
             'is_xloadlambda': (yield dut.is_xloadlambda),
         }
 
+        # ── Test D ──
+        yield dut.instruction.eq(eloadcall_instr_d)
+        yield Settle()
+        results['d'] = {
+            'church_op':             (yield dut.church_op),
+            'is_eloadcall':          (yield dut.is_eloadcall),
+            'is_xloadlambda':        (yield dut.is_xloadlambda),
+            'eloadcall_row':         (yield dut.eloadcall_row),
+            'eloadcall_method_index':(yield dut.eloadcall_method_index),
+            'fault_valid':           (yield dut.fault_valid),
+            'cr_dst':                (yield dut.cr_dst),
+            'cr_src':                (yield dut.cr_src),
+        }
+
     sim_dec = Simulator(dut)
     sim_dec.add_process(decoder_process)
     with sim_dec.write_vcd("/tmp/decoder_eloadcall_xloadlambda.vcd"):
@@ -1507,10 +1565,10 @@ def test_decoder_eloadcall_xloadlambda():
         f"ELOADCALL: is_eloadcall should be 1, got {a['is_eloadcall']}")
     assert a['is_xloadlambda'] == 0, (
         f"ELOADCALL: is_xloadlambda should be 0, got {a['is_xloadlambda']}")
-    assert a['eloadcall_row'] == 0x5C, (
-        f"ELOADCALL: eloadcall_row={a['eloadcall_row']:#04x}, expected 0x5c")
-    assert a['eloadcall_method_index'] == 0xA, (
-        f"ELOADCALL: eloadcall_method_index={a['eloadcall_method_index']:#03x}, expected 0xa")
+    assert a['eloadcall_row'] == EL_ROW, (
+        f"ELOADCALL: eloadcall_row={a['eloadcall_row']}, expected {EL_ROW}")
+    assert a['eloadcall_method_index'] == EL_METHOD, (
+        f"ELOADCALL: eloadcall_method_index={a['eloadcall_method_index']}, expected {EL_METHOD}")
     assert a['fault_valid'] == 0, (
         f"ELOADCALL: unexpected fault (fault_valid={a['fault_valid']})")
     assert a['cr_dst'] == EL_CR_DST, (
@@ -1518,7 +1576,7 @@ def test_decoder_eloadcall_xloadlambda():
     assert a['cr_src'] == EL_CR_SRC, (
         f"ELOADCALL: cr_src={a['cr_src']}, expected {EL_CR_SRC}")
     print(f"  PASS A: ELOADCALL → church_op=8, is_eloadcall=1, "
-          f"row=0x{a['eloadcall_row']:02x}, method_index=0x{a['eloadcall_method_index']:x}, "
+          f"row={a['eloadcall_row']}, method_index={a['eloadcall_method_index']}, "
           f"no fault")
 
     # ── Assert Test B ──
@@ -1549,6 +1607,28 @@ def test_decoder_eloadcall_xloadlambda():
     assert c['is_eloadcall'] == 0 and c['is_xloadlambda'] == 0, (
         "LAMBDA backward-compat: is_eloadcall/is_xloadlambda should both be 0")
     print("  PASS C: LAMBDA (opcode 7) still decodes correctly, no cross-fire")
+
+    # ── Assert Test D — method_index > 15 must not be truncated ──────────────
+    d = results['d']
+    assert d['church_op'] == int(ChurchOpcode.ELOADCALL), (
+        f"ELOADCALL D: church_op={d['church_op']}, expected {int(ChurchOpcode.ELOADCALL)}")
+    assert d['is_eloadcall'] == 1, (
+        f"ELOADCALL D: is_eloadcall should be 1, got {d['is_eloadcall']}")
+    assert d['is_xloadlambda'] == 0, (
+        f"ELOADCALL D: is_xloadlambda should be 0, got {d['is_xloadlambda']}")
+    assert d['eloadcall_method_index'] == D_METHOD, (
+        f"ELOADCALL D: method_index={d['eloadcall_method_index']}, expected {D_METHOD} "
+        f"(old 4-bit encoding would have truncated this to {D_METHOD & 0xF})")
+    assert d['eloadcall_row'] == D_ROW, (
+        f"ELOADCALL D: row={d['eloadcall_row']}, expected {D_ROW}")
+    assert d['cr_dst'] == D_CR_DST, (
+        f"ELOADCALL D: cr_dst={d['cr_dst']}, expected {D_CR_DST}")
+    assert d['cr_src'] == D_CR_SRC, (
+        f"ELOADCALL D: cr_src={d['cr_src']}, expected {D_CR_SRC}")
+    assert d['fault_valid'] == 0, (
+        f"ELOADCALL D: unexpected fault (fault_valid={d['fault_valid']})")
+    print(f"  PASS D: method_index={D_METHOD} (>15) decoded correctly — "
+          f"7-bit widening confirmed, no truncation to {D_METHOD & 0xF}")
 
     print("=== CMCapDecoder ELOADCALL + XLOADLAMBDA Tests PASSED ===")
     print("PASS: test_decoder_eloadcall_xloadlambda")

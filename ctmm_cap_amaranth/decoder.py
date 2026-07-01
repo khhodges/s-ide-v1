@@ -35,11 +35,13 @@ class CMCapDecoder(Elaboratable):
         # ELOADCALL / XLOADLAMBDA decode outputs (mirrors hardware/decoder.py field names)
         self.is_eloadcall       = Signal()
         self.is_xloadlambda     = Signal()
-        # ELOADCALL split-immediate: imm12[7:0] = c-list row, imm12[11:8] = method index
-        # (mirrors native decoder: imm15[7:0]=row, imm15[14:8]=method_index; capped at 4
-        #  bits here because the RISC-V CUSTOM-0 immediate field is 12 bits, not 15)
-        self.eloadcall_row          = Signal(8)   # imm12[7:0]  — c-list row
-        self.eloadcall_method_index = Signal(4)   # imm12[11:8] — method index (4-bit in ctmm)
+        # ELOADCALL uses R-type encoding to carry a full 7-bit method index:
+        #   funct7[6:0] (instr[31:25]) = method_index  — matches native decoder's 7-bit field
+        #   rs2[4:0]    (instr[24:20]) = c-list row     — 5 bits (0-31 rows)
+        # This replaces the former I-type split (imm12[11:8] = 4-bit method_index, max 16
+        # methods) which silently truncated abstractions with more than 16 method entries.
+        self.eloadcall_row          = Signal(5)   # rs2   = instr[24:20] — c-list row (0-31)
+        self.eloadcall_method_index = Signal(7)   # funct7 = instr[31:25] — method index (0-127)
 
         self.fault = Signal(4)
         self.fault_valid = Signal()
@@ -127,11 +129,13 @@ class CMCapDecoder(Elaboratable):
                 is_custom0 & self.instr_valid &
                 (church_op_4b == ChurchOpcode.XLOADLAMBDA)
             ),
-            # Split-immediate for ELOADCALL: mirrors native imm15 field split
-            # (native: imm15[7:0]=row, imm15[14:8]=method_index)
-            # ctmm: imm12[7:0]=row (instr[27:20]), imm12[11:8]=method_index (instr[31:28])
-            self.eloadcall_row.eq(instr[20:28]),
-            self.eloadcall_method_index.eq(instr[28:32]),
+            # R-type decode for ELOADCALL:
+            #   rs2[4:0]    = instr[24:20] → c-list row (5 bits, 0-31)
+            #   funct7[6:0] = instr[31:25] → method index (7 bits, 0-127)
+            # Matches the native decoder's 7-bit method_index field; eliminates
+            # the former 4-bit I-type truncation that silently dropped methods > 15.
+            self.eloadcall_row.eq(instr[20:25]),
+            self.eloadcall_method_index.eq(instr[25:32]),
         ]
 
         m.d.comb += [
