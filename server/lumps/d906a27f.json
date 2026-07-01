@@ -6,7 +6,7 @@
   "lump_size": 1024,
   "typ": 0,
   "content_type": "code",
-  "cw": 512,
+  "cw": 515,
   "cc": 8,
   "profile": "IoT",
   "language": "assembly",

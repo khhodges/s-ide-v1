@@ -6054,9 +6054,9 @@ HALT`,
 ;   SECTION K   Tests  78-79   CHANGE (CR swap) + post-swap permission verify
 ;   SECTION L   Tests  80-81   LOAD from multiple c-list slots
 ;
-; Result on RETURN:
-;   DR0 = 0    all 81 tests passed
-;   DR0 = N    test N was the first to fail (fail-fast)
+; Result:
+;   All 81 tests passed → DR0 = 0, then loops waiting for a valid E-GT in CR0
+;   First failure      → DR0 = N (test N), RETURN to caller with fail code
 ;
 ; Register conventions
 ; --------------------
@@ -6081,6 +6081,7 @@ HALT`,
 ; RETURN takes no operand (bare RETURN unwinds the call frame).
 
 ; ── Initialise ───────────────────────────────────────────────────────────────
+start:
     ISUB DR0, DR0, DR0
 
     LOAD CR1, Boot.Nucs
@@ -6813,11 +6814,15 @@ tL81:
     RETURN
 
 ; ═══════════════════════════════════════════════════════════════════════════════
-; All 81 tests passed
+; All 81 tests passed — enter recovery loop
 ; ═══════════════════════════════════════════════════════════════════════════════
 done:
-    ISUB DR0, DR0, DR0
-    RETURN`,
+    ISUB DR0, DR0, DR0      ; DR0 = 0 (all tests passed)
+    TPERM CR0, E            ; is Thread.caps[0] a valid E-GT?
+    BRANCHEQ launch         ; yes — dispatch to programmer's first abstraction
+    BRANCH AL, start        ; no — loop and re-run all 81 tests
+launch:
+    CALL CR0                ; enter programmer's first abstraction`,
         'gt_v1_1_test': `; GT Encoding v1.1 Hardware Self-Test
 ; =====================================
 ; A CLOOMC program that exercises the live mLoad capability pipeline to

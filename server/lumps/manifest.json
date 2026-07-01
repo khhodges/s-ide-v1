@@ -2124,7 +2124,7 @@
         "ns_slot_policy": "dynamic",
         "variant_group": null,
         "lump_size": 1024,
-        "cw": 512,
+        "cw": 515,
         "cc": 8,
         "grants": [
             "E"
