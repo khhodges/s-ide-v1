@@ -1262,6 +1262,20 @@ BOOT_IMAGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                "lumps", "boot-image.bin")
 LUMPS_DIR = os.path.dirname(LUMPS_MANIFEST_PATH)
 
+# Canonical list of server-managed tokens — excluded from the /api/lumps browser
+# listing and exempt from the R3 manifest-presence check in test_lump_consistency.py.
+# Edit server/lumps/server_managed_tokens.json (one place only) to add new tokens.
+def _load_server_managed_tokens() -> frozenset:
+    _path = os.path.join(LUMPS_DIR, 'server_managed_tokens.json')
+    try:
+        with open(_path) as _f:
+            return frozenset(t.lower() for t in json.load(_f).get('tokens', []))
+    except Exception as _e:
+        print(f'[lumps] WARNING: could not load server_managed_tokens.json: {_e}', flush=True)
+        return frozenset({'00000600', '00000003'})
+
+SERVER_MANAGED_TOKENS: frozenset = _load_server_managed_tokens()
+
 def _read_saved_boot_config():
     """Load and revalidate the persisted boot-config.json. Returns the
     cfg dict on success, or (None, error_message) on failure."""
@@ -5013,7 +5027,7 @@ def list_lumps():
     # Boot.NS (slot 0, typ=1) comes first so it heads the list; Boot.Abstr (slot 6)
     # follows immediately after.  Filter any stale manifest duplicates first.
     if _BOOT_ABSTR_META:
-        result = [e for e in result if e.get('token') not in ('00000600', '00000300', '00000003')]
+        result = [e for e in result if e.get('token') not in SERVER_MANAGED_TOKENS]
         result = [dict(_BOOT_ABSTR_META)] + result
     if _BOOT_NS_META:
         result = [e for e in result if e.get('token') != '00000000']
