@@ -683,6 +683,101 @@ function init() {
                 } catch (_e) {}
             }, 3000);
         });
+        // ── Live-lint: capabilities block size gate ───────────────────────────
+        // Counts entries in every capabilities { } block and emits a warning
+        // when any block exceeds 32 (the hardware c-list limit imposed by the
+        // 5-bit ELOADCALL row field).  Fires on text change, debounced 500 ms,
+        // so the programmer sees the constraint at edit time rather than only
+        // after pressing Assemble/Run.
+        var _capLintTimer = null;
+        function _lintCapBlockSize(source) {
+            var warnings = [];
+            var lines = source.split('\n');
+            var inCapBlock = false;
+            var capCount   = 0;
+            var capBlockLine = 1;
+
+            function _capItem(s) {
+                var t = s.replace(/;.*$/, '').trim();
+                if (!t) return null;
+                return t.split(/\s+/)[0] || null;
+            }
+
+            function _emitIfOver() {
+                if (capCount > 32) {
+                    var excess = capCount - 32;
+                    warnings.push({
+                        line: capBlockLine,
+                        message: 'capabilities block declares ' + capCount
+                            + ' entries but the hardware c-list is limited to 32'
+                            + ' (ELOADCALL uses a 5-bit row field, slots 0\u201331).'
+                            + ' Remove ' + excess + ' entr'
+                            + (excess === 1 ? 'y' : 'ies')
+                            + ' or split the abstraction into smaller ones.'
+                    });
+                }
+            }
+
+            for (var i = 0; i < lines.length; i++) {
+                var raw = lines[i];
+                var line = raw.replace(/;.*$/, '').trim();
+                if (!line) continue;
+
+                if (!inCapBlock && /^capabilities\s*\{/i.test(line)) {
+                    capBlockLine = i + 1;
+                    capCount = 0;
+                    var singleMatch = line.match(/^capabilities\s*\{([^}]*)\}/i);
+                    if (singleMatch) {
+                        var sItems = singleMatch[1].split(',');
+                        for (var j = 0; j < sItems.length; j++) {
+                            if (_capItem(sItems[j])) capCount++;
+                        }
+                        _emitIfOver();
+                    } else {
+                        inCapBlock = true;
+                        var tail = line.replace(/^capabilities\s*\{/i, '').trim();
+                        if (tail) {
+                            var tItems = tail.split(',');
+                            for (var k = 0; k < tItems.length; k++) {
+                                if (_capItem(tItems[k])) capCount++;
+                            }
+                        }
+                    }
+                    continue;
+                }
+
+                if (inCapBlock) {
+                    if (line.indexOf('}') >= 0) {
+                        inCapBlock = false;
+                        _emitIfOver();
+                    } else {
+                        var bItems = line.split(',');
+                        for (var m = 0; m < bItems.length; m++) {
+                            if (_capItem(bItems[m])) capCount++;
+                        }
+                    }
+                }
+            }
+            return warnings;
+        }
+
+        asmEd.addEventListener('input', function() {
+            clearTimeout(_capLintTimer);
+            _capLintTimer = setTimeout(function() {
+                try {
+                    var src = asmEd.value || '';
+                    var capWarnings = _lintCapBlockSize(src);
+                    if (typeof _showAsmWarnings === 'function' && typeof _clearAsmWarnings === 'function') {
+                        if (capWarnings.length > 0) {
+                            _showAsmWarnings(capWarnings);
+                        } else {
+                            _clearAsmWarnings();
+                        }
+                    }
+                } catch (_e) {}
+            }, 500);
+        });
+        // ─────────────────────────────────────────────────────────────────────
         asmEd.addEventListener('scroll', syncLineScroll);
         if (typeof ResizeObserver !== 'undefined') {
             new ResizeObserver(function() { syncLineScroll(); _debouncedErrorRecalc(); }).observe(asmEd);
