@@ -1763,6 +1763,17 @@ def test_core_eloadcall_xloadlambda_irq():
             f"got {xl_v_idle}")
         print("  PASS XLOADLAMBDA: xloadlambda_valid=0 when not executing")
 
+        # Verify NIA redirect: CR14.word1_location (0x100) + XL_IMM12 (0x1A2) = 0x2A2.
+        # The sync update fires on the clock edge of the XLOADLAMBDA cycle, so nia_reg
+        # holds the lambda body address in the cycle immediately following the instruction.
+        xl_expected_nia = 0x100 + XL_IMM12
+        xl_nia = ctx.get(dut.nia)
+        assert xl_nia == xl_expected_nia, (
+            f"XLOADLAMBDA: NIA should redirect to CR14.base + cap_index = "
+            f"{xl_expected_nia:#010x}, got {xl_nia:#010x}")
+        print(f"  PASS XLOADLAMBDA: NIA redirected to {xl_nia:#010x} "
+              f"(CR14.word1_location=0x100 + cap_index={XL_IMM12:#05x})")
+
         print("=== CMCapCore ELOADCALL + XLOADLAMBDA IRQ Tests PASSED ===")
 
     sim.add_testbench(testbench)

@@ -160,6 +160,11 @@ class CMCapCore(Elaboratable):
         mwin_busy   = Signal()
         m.d.comb += exec_enable.eq(self.boot_complete & self.imem_valid & ~mwin_busy)
 
+        # Declared here (before NIA chain) so the NIA Elif branch can reference them.
+        # Combinatorial assignments are filled in later alongside the XLOADLAMBDA dispatch.
+        xloadlambda_fire = Signal()
+        xloadlambda_nia  = Signal(32)
+
         lambda_start_sig = Signal()
         m.d.comb += lambda_start_sig.eq(
             exec_enable & is_church_op & (church_op == ChurchOpcode.LAMBDA)
@@ -534,6 +539,8 @@ class CMCapCore(Elaboratable):
             m.d.sync += nia_reg.eq(u_return.nia_value)
         with m.Elif(u_call.nia_set):
             m.d.sync += nia_reg.eq(u_call.nia_value)
+        with m.Elif(xloadlambda_fire):
+            m.d.sync += nia_reg.eq(xloadlambda_nia)
         with m.Elif(jump_taken):
             m.d.sync += nia_reg.eq(jump_target)
         with m.Elif(branch_taken):
@@ -717,7 +724,6 @@ class CMCapCore(Elaboratable):
         # Fires for one cycle whenever XLOADLAMBDA passes the X-perm check on CR_CLOOMC.
         # xloadlambda_index carries the lambda body offset from the instruction cap_index field.
         # -----------------------------------------------------------------------
-        xloadlambda_fire = Signal()
         m.d.comb += xloadlambda_fire.eq(
             exec_enable & is_church_op & (church_op == ChurchOpcode.XLOADLAMBDA) & all_checks_pass
         )
@@ -726,6 +732,14 @@ class CMCapCore(Elaboratable):
             self.xloadlambda_valid.eq(xloadlambda_fire),
             self.xloadlambda_index.eq(u_decoder.cap_index),
         ]
+
+        # XLOADLAMBDA NIA redirect — CR14.word1_location + cap_index.
+        # u_regs.cr_rd_data is already muxed to CR_CLOOMC (CR14) when xloadlambda fires,
+        # so this is a purely combinatorial address computation with no extra read cycle.
+        m.d.comb += xloadlambda_nia.eq(
+            View(CAP_REG_LAYOUT, u_regs.cr_rd_data).word1_location[:32]
+            + u_decoder.cap_index
+        )
 
         # -----------------------------------------------------------------------
         # M-window FSM
