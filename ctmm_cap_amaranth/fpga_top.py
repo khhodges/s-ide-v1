@@ -4,6 +4,8 @@ from amaranth.lib.data import View
 from .types import *
 from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, NS_ENTRY_LAYOUT
 from .core import CMCapCore
+from hardware.irq_dispatch import ChurchIRQDispatch
+from hardware.hw_types import SCHEDULER_IRQ_NS_SLOT, IRQ_REASON_LAZY_RESOLVE
 
 
 class UARTTransmitter(Elaboratable):
@@ -135,10 +137,14 @@ class CMCapFPGATop(Elaboratable):
         reporter = StatusReporter(divisor=self.uart_divisor)
         m.submodules.reporter = reporter
 
+        dispatch = ChurchIRQDispatch()
+        m.submodules.dispatch = dispatch
+
         imem_init = self.program + [0] * (IMEM_DEPTH - len(self.program))
         imem = Memory(width=32, depth=IMEM_DEPTH, init=imem_init[:IMEM_DEPTH])
         m.submodules.imem = imem
         imem_rd = imem.read_port()
+        imem_rd2 = imem.read_port()
 
         m.d.comb += [
             imem_rd.addr.eq(core.imem_addr[2:12]),
@@ -163,6 +169,7 @@ class CMCapFPGATop(Elaboratable):
         m.submodules.ns_mem = ns_mem
         ns_rd = ns_mem.read_port()
         ns_wr = ns_mem.write_port()
+        ns_rd2 = ns_mem.read_port()
 
         m.d.comb += [
             ns_rd.addr.eq(core.ns_addr[:8]),
@@ -214,6 +221,114 @@ class CMCapFPGATop(Elaboratable):
             self.leds[1].eq(core.fault_valid),
             self.leds[2].eq(core.gc_busy),
             self.leds[3].eq(core.nia[0]),
+        ]
+
+        # -----------------------------------------------------------------------
+        # IRQ dispatch — connect core ELOADCALL outputs to ChurchIRQDispatch.
+        #
+        # The dispatch FSM performs two sequential memory reads:
+        #   FETCH_NS:     reads ns_mem slot SCHEDULER_IRQ_NS_SLOT (always slot 8)
+        #                 to obtain the Scheduler lump base address (word0_location).
+        #   FETCH_METHOD: reads imem at (ns_base + SCHEDULER_IRQ_METHOD_IDX * 4)
+        #                 to obtain the handler method-table entry.
+        #
+        # A 1-bit phase tracker (irq_fetch_phase) distinguishes the two reads:
+        #   0 = FETCH_NS (first read in any dispatch sequence)
+        #   1 = FETCH_METHOD (second read)
+        # The phase resets to 0 whenever the dispatch unit is idle.
+        #
+        # Memory responses are provided with 1-cycle synchronous latency via a
+        # registered valid signal (dispatch_mem_valid_r), matching the Amaranth
+        # synchronous read-port model used for all other on-chip memories.
+        # -----------------------------------------------------------------------
+
+        # ns_rd2: dedicated second read port — permanently addressed to
+        # SCHEDULER_IRQ_NS_SLOT so word0_location is always ready on ns_rd2.data[:32].
+        m.d.comb += ns_rd2.addr.eq(SCHEDULER_IRQ_NS_SLOT)
+
+        # imem_rd2: second read port for method-table lookup during FETCH_METHOD.
+        # Address is driven by the dispatch's mem_rd_addr (byte → word conversion).
+        m.d.comb += imem_rd2.addr.eq(dispatch.mem_rd_addr[2:12])
+
+        # Phase tracker: 0=FETCH_NS, 1=FETCH_METHOD.
+        # Advances only when the dispatch actually consumes a valid response
+        # (mem_rd_en & mem_rd_valid), so it lags the FSM transition by 0 cycles.
+        irq_fetch_phase = Signal()
+
+        # phase_settled: suppresses the stale dispatch_mem_valid_r that arrives
+        # in the FIRST cycle of each new fetch phase.  When the phase transitions
+        # (IDLE→FETCH_NS or FETCH_NS→FETCH_METHOD), settled resets to 0 for
+        # one cycle so the dispatch sees no valid until the address has been
+        # presented for a full clock cycle and the new memory data is ready.
+        phase_settled = Signal()
+
+        # 1-cycle registered valid — mirrors Amaranth synchronous read-port latency.
+        dispatch_mem_valid_r = Signal()
+        m.d.sync += dispatch_mem_valid_r.eq(dispatch.mem_rd_en)
+
+        with m.If(~dispatch.busy):
+            m.d.sync += [irq_fetch_phase.eq(0), phase_settled.eq(0)]
+        with m.Elif(dispatch.mem_rd_en & dispatch.mem_rd_valid):
+            m.d.sync += [irq_fetch_phase.eq(1), phase_settled.eq(0)]
+        with m.Else():
+            with m.If(~phase_settled):
+                m.d.sync += phase_settled.eq(1)
+
+        m.d.comb += [
+            dispatch.mem_rd_valid.eq(dispatch_mem_valid_r & phase_settled),
+            # FETCH_NS (phase=0): ns_mem slot SCHEDULER_IRQ_NS_SLOT word0_location.
+            # FETCH_METHOD (phase=1): imem word at ns_base + SCHEDULER_IRQ_METHOD_IDX*4.
+            dispatch.mem_rd_data.eq(
+                Mux(irq_fetch_phase == 0,
+                    ns_rd2.data[:32],
+                    imem_rd2.data)
+            ),
+        ]
+
+        # -----------------------------------------------------------------------
+        # Wire core IRQ outputs → dispatch inputs.
+        #
+        # dispatch.irq_slot receives core.irq_dr1 (the c-list row of the NULL GT),
+        # NOT core.irq_ns_slot (which is always the constant SCHEDULER_IRQ_NS_SLOT=8).
+        # The dispatch writes irq_slot to DR1, so DR1 carries the recovery context
+        # (which c-list slot needs to be resolved) that Scheduler.IRQ needs.
+        # -----------------------------------------------------------------------
+        m.d.comb += [
+            dispatch.start.eq(core.irq_valid),
+            dispatch.irq_reason.eq(core.irq_reason[:2]),
+            dispatch.irq_slot.eq(core.irq_dr1),
+            dispatch.cr15_namespace.eq(core.cr15_namespace_out),
+        ]
+
+        # -----------------------------------------------------------------------
+        # irq_method_index — advisory context for the handler.
+        # Latched from core.irq_method_index on the irq_valid pulse, then written
+        # to DR2 via core.irq_dispatch_dr2_wr_en when dispatch.complete fires.
+        # DR2 tells Scheduler.IRQ which method was stalled so it can retry the call
+        # after resolving the NULL c-list GT.
+        # -----------------------------------------------------------------------
+        irq_method_index_lat = Signal(7)
+        with m.If(core.irq_valid):
+            m.d.sync += irq_method_index_lat.eq(core.irq_method_index)
+
+        m.d.comb += [
+            core.irq_dispatch_dr2_wr_en.eq(dispatch.complete),
+            core.irq_dispatch_dr2_wr_data.eq(irq_method_index_lat),
+        ]
+
+        # -----------------------------------------------------------------------
+        # Wire dispatch write-back outputs → core write-back input ports.
+        # dispatch.busy stalls core instruction execution while the FSM runs.
+        # -----------------------------------------------------------------------
+        m.d.comb += [
+            core.irq_dispatch_busy.eq(dispatch.busy),
+            core.irq_dispatch_nia_set.eq(dispatch.nia_set),
+            core.irq_dispatch_nia_value.eq(dispatch.nia_value),
+            core.irq_dispatch_dr_wr_en.eq(dispatch.dr_wr_en),
+            core.irq_dispatch_dr_wr_addr.eq(dispatch.dr_wr_addr),
+            core.irq_dispatch_dr_wr_data.eq(dispatch.dr_wr_data),
+            core.irq_dispatch_dr1_wr_en.eq(dispatch.dr1_wr_en),
+            core.irq_dispatch_dr1_wr_data.eq(dispatch.dr1_wr_data),
         ]
 
         return m

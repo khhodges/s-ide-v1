@@ -93,6 +93,25 @@ class CMCapCore(Elaboratable):
         self.xloadlambda_valid = Signal()
         self.xloadlambda_index = Signal(12)
 
+        # IRQ dispatch write-back input ports — driven by ChurchIRQDispatch in fpga_top.
+        # irq_dispatch_busy stalls exec_enable while the dispatch FSM is running.
+        # nia_set/nia_value override the NIA register when the dispatch FSM completes.
+        # dr_wr_*  writes DR0 (irq_reason); dr1_wr_* writes DR1 (irq_slot/c-list row);
+        # dr2_wr_* writes DR2 (irq_method_index, advisory context for Scheduler.IRQ).
+        self.irq_dispatch_busy        = Signal()
+        self.irq_dispatch_nia_set     = Signal()
+        self.irq_dispatch_nia_value   = Signal(32)
+        self.irq_dispatch_dr_wr_en    = Signal()
+        self.irq_dispatch_dr_wr_addr  = Signal(4)
+        self.irq_dispatch_dr_wr_data  = Signal(32)
+        self.irq_dispatch_dr1_wr_en   = Signal()
+        self.irq_dispatch_dr1_wr_data = Signal(32)
+        self.irq_dispatch_dr2_wr_en   = Signal()
+        self.irq_dispatch_dr2_wr_data = Signal(32)
+
+        # CR15 namespace capability — output for ChurchIRQDispatch NS table lookup.
+        self.cr15_namespace_out = Signal(CAP_REG_LAYOUT)
+
     def elaborate(self, platform):
         m = Module()
 
@@ -158,7 +177,9 @@ class CMCapCore(Elaboratable):
 
         exec_enable = Signal()
         mwin_busy   = Signal()
-        m.d.comb += exec_enable.eq(self.boot_complete & self.imem_valid & ~mwin_busy)
+        m.d.comb += exec_enable.eq(
+            self.boot_complete & self.imem_valid & ~mwin_busy & ~self.irq_dispatch_busy
+        )
 
         # Declared here (before NIA chain) so the NIA Elif branch can reference them.
         # Combinatorial assignments are filled in later alongside the XLOADLAMBDA dispatch.
@@ -494,10 +515,30 @@ class CMCapCore(Elaboratable):
         tperm_flags_view = View(COND_FLAGS_LAYOUT, tperm_flags)
         m.d.comb += tperm_flags_view.Z.eq(u_tperm.tperm_z_result)
 
+        irq_dr_active = Signal()
+        m.d.comb += irq_dr_active.eq(
+            self.irq_dispatch_dr_wr_en | self.irq_dispatch_dr1_wr_en
+            | self.irq_dispatch_dr2_wr_en
+        )
+
         m.d.comb += [
-            u_regs.xr_wr_addr.eq(rd),
-            u_regs.xr_wr_data.eq(xr_wr_data),
-            u_regs.xr_wr_en.eq(xr_wr_en),
+            u_regs.xr_wr_addr.eq(
+                Mux(irq_dr_active,
+                    Mux(self.irq_dispatch_dr1_wr_en, 1,
+                    Mux(self.irq_dispatch_dr2_wr_en, 2,
+                        self.irq_dispatch_dr_wr_addr)),
+                    rd)
+            ),
+            u_regs.xr_wr_data.eq(
+                Mux(irq_dr_active,
+                    Mux(self.irq_dispatch_dr1_wr_en,
+                        self.irq_dispatch_dr1_wr_data,
+                    Mux(self.irq_dispatch_dr2_wr_en,
+                        self.irq_dispatch_dr2_wr_data,
+                        self.irq_dispatch_dr_wr_data)),
+                    xr_wr_data)
+            ),
+            u_regs.xr_wr_en.eq(xr_wr_en | irq_dr_active),
             u_regs.flags_in.eq(Mux(u_tperm.tperm_complete, tperm_flags, flags_in)),
             u_regs.flags_wr_en.eq(flags_wr_en | u_tperm.tperm_complete),
             u_regs.clear_all.eq(clear_all),
@@ -543,6 +584,8 @@ class CMCapCore(Elaboratable):
 
         with m.If(clear_all):
             m.d.sync += nia_reg.eq(0)
+        with m.Elif(self.irq_dispatch_nia_set):
+            m.d.sync += nia_reg.eq(self.irq_dispatch_nia_value)
         with m.Elif(u_lambda.nia_set):
             m.d.sync += nia_reg.eq(u_lambda.nia_value)
         with m.Elif(u_return.nia_set):
@@ -562,6 +605,7 @@ class CMCapCore(Elaboratable):
             self.imem_addr.eq(nia_reg),
             self.nia.eq(nia_reg),
             self.flags.eq(u_regs.flags),
+            self.cr15_namespace_out.eq(u_regs.cr15_namespace),
         ]
 
         boot_wr_en = [Signal(name=f"boot_cr{i}_wr_en") for i in range(16)]
