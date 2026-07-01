@@ -35,7 +35,7 @@ def integrity32(w0, w1):
 
     Args:
         w0: NS entry W0 (location), integer.
-        w1: NS entry W1 (authority), integer.  g_bit [28] is masked out.
+        w1: NS entry W1 (authority), integer.  g_bit at W1[30] is masked out.
 
     Returns:
         32-bit integer — the value that should be stored in NS entry W2.

@@ -30,8 +30,9 @@ Every instruction is a 32-bit word with a fixed layout:
 
 The **all-zero word** `0x00000000` encodes `LOAD EQ, CR0, CR0, #0`. The simulator
 treats an all-zero instruction word encountered during normal execution as a warm
-reboot. **HALT does not exist as an instruction** — programs terminate by fault,
-by entering an infinite loop, or by not returning from a top-level CALL.
+reboot. **HALT is an assembler pseudo-op** that emits `0x00000000` — it is not
+a real ISA instruction. Programs may also terminate by fault, by entering an
+infinite loop, or by not returning from a top-level CALL.
 
 ---
 
@@ -137,7 +138,10 @@ dom=1 (Church):  perm[2]=E, perm[1]=S, perm[0]=L
 
 ## 4. Program Termination
 
-**HALT does not exist** as an instruction in the Church Machine ISA.
+**HALT is an assembler pseudo-op**, not a real ISA instruction. The assembler
+emits `0x00000000` for `HALT`, which the hardware interprets as
+`LOAD EQ, CR0, CR0, #0` (a conditional no-op when Z=0). In the simulator,
+an all-zero word fetched during execution triggers a warm reboot.
 
 Programs end in one of three ways:
 - **By fault** — an invalid operation, permission failure, or LUMP magic word fetched as an instruction triggers the three-tier fault recovery chain.
@@ -214,9 +218,9 @@ Flag-writing summary across all 20 instructions:
 > Assembler syntax: `SHR DR1, DR2, #4` (LSR) or `SHR DR1, DR2, #4, ASR` (ASR).
 > C = last bit shifted out. V = 0 always.
 >
-> **Simulator/hardware deviation (D-12, open):** The hardware currently implements
-> LSR only (C = 0, no ASR mode). The simulator implements both correctly.
-> Task #857 tracks the hardware fix.
+> **Hardware deviation (D-12, CLOSED):** The hardware previously implemented
+> LSR only (C = 0, no ASR mode). Task #857 fixed the hardware to match the
+> simulator. Both now implement ASR and the C flag correctly.
 
 > **A.4 — BRANCH: bit 14 of imm15 is the sign bit.**
 >
@@ -949,7 +953,7 @@ XLOADLAMBDA AL, CR1, CR6, #7  ; opcode=9, cond=14, fld_a=1, fld_b=6, imm=7
 
 ---
 
-### DREAD — Data Read (opcode 10, 0x0A)
+### DREAD — Data Read (opcode 16, 0x10)
 
 DREAD supports two addressing modes selected by **imm15[14]** (the mode bit), following the same precedent as IADD/ISUB.
 
@@ -957,7 +961,7 @@ DREAD supports two addressing modes selected by **imm15[14]** (the mode bit), fo
 
 ```
 Syntax:    DREAD DRd, CRs, #offset
-Encoding:  op[4:0]=0x0A | cond[4] | DRd[4] | CRs[4] | 1 | offset[13:0]
+Encoding:  op[4:0]=0x10 | cond[4] | DRd[4] | CRs[4] | 1 | offset[13:0]
 
 imm15 field:  bit14=1 (immediate) | bits[13:0] = offset  (range 0–16383)
 ```
@@ -966,7 +970,7 @@ imm15 field:  bit14=1 (immediate) | bits[13:0] = offset  (range 0–16383)
 
 ```
 Syntax:    DREAD DRd, CRs, #base, DRx
-Encoding:  op[4:0]=0x0A | cond[4] | DRd[4] | CRs[4] | 0 | base[9:0] | DRx[3:0]
+Encoding:  op[4:0]=0x10 | cond[4] | DRd[4] | CRs[4] | 0 | base[9:0] | DRx[3:0]
 
 imm15 field:  bit14=0 (indexed) | bits[13:4] = base (0–1023) | bits[3:0] = DRx index
 effective_offset = base + DR[DRx]   (bounds-checked on the combined sum)
@@ -997,7 +1001,7 @@ DR0 is hardwired zero, so `DRx=0` makes indexed mode equivalent to a pure-base i
 Immediate mode — read word 3 from the data object in CR2 into DR1:
 ```
 DREAD DR1, CR2, #3   ; imm15 = 0x4003 (bit14=1, offset=3)
-                     ; encoding: op=0x0A cond=AL crDst=1 crSrc=2 imm=0x4003
+                     ; encoding: op=0x10 cond=AL crDst=1 crSrc=2 imm=0x4003
 ```
 
 Indexed mode — read table row indexed by DR3 with base 10, using CR0 as the table cap:
@@ -1015,7 +1019,7 @@ DREAD DR0, CR14, #data_val   ; offset = label word index; X permission accepted;
 
 ---
 
-### DWRITE — Data Write (opcode 11, 0x0B)
+### DWRITE — Data Write (opcode 17, 0x11)
 
 DWRITE supports the same two addressing modes as DREAD, using **imm15[14]** as the mode bit.
 
@@ -1023,7 +1027,7 @@ DWRITE supports the same two addressing modes as DREAD, using **imm15[14]** as t
 
 ```
 Syntax:    DWRITE DRd, CRs, #offset
-Encoding:  op[4:0]=0x0B | cond[4] | DRd[4] | CRs[4] | 1 | offset[13:0]
+Encoding:  op[4:0]=0x11 | cond[4] | DRd[4] | CRs[4] | 1 | offset[13:0]
 
 imm15 field:  bit14=1 (immediate) | bits[13:0] = offset  (range 0–16383)
 ```
@@ -1032,7 +1036,7 @@ imm15 field:  bit14=1 (immediate) | bits[13:0] = offset  (range 0–16383)
 
 ```
 Syntax:    DWRITE DRd, CRs, #base, DRx
-Encoding:  op[4:0]=0x0B | cond[4] | DRd[4] | CRs[4] | 0 | base[9:0] | DRx[3:0]
+Encoding:  op[4:0]=0x11 | cond[4] | DRd[4] | CRs[4] | 0 | base[9:0] | DRx[3:0]
 
 imm15 field:  bit14=0 (indexed) | bits[13:4] = base (0–1023) | bits[3:0] = DRx index
 effective_offset = base + DR[DRx]
@@ -1062,7 +1066,7 @@ effective_offset = base + DR[DRx]
 Immediate mode — write DR0 to offset 0 of the data object in CR1:
 ```
 DWRITE DR0, CR1, #0   ; imm15 = 0x4000 (bit14=1, offset=0)
-                       ; encoding: op=0x0B cond=AL crDst=0 crSrc=1 imm=0x4000
+                       ; encoding: op=0x11 cond=AL crDst=0 crSrc=1 imm=0x4000
 ```
 
 Indexed mode — write DR1 to table row indexed by DR2 with base 5, using CR3 as the table cap:
@@ -1073,11 +1077,11 @@ DWRITE DR1, CR3, #5, DR2   ; effective_offset = 5 + DR2
 
 ---
 
-### BFEXT — Bit-Field Extract (opcode 12, 0x0C)
+### BFEXT — Bit-Field Extract (opcode 18, 0x12)
 
 ```
 Syntax:  BFEXT DRd, DRs, #pos, #width
-Encoding: op[4:0]=0x0C | cond[4] | DRd[4] | DRs[4] | pos[5] | width[5] | 0[5]
+Encoding: op[4:0]=0x12 | cond[4] | DRd[4] | DRs[4] | pos[5] | width[5] | 0[5]
 ```
 
 `imm15[9:5]` = `pos` (5-bit, 0–31 — LSB of the extracted field).
@@ -1105,17 +1109,17 @@ Flags are written (see A.2): N = result[31], Z = (result == 0), C = 0, V = 0. Si
 ```
 BFEXT AL, DR1, DR2, #0, #8  ; pos=0, width=8
                               ; imm = (0 << 5) | 8 = 0x0008
-                              ; opcode=12, cond=14, fld_a=1, fld_b=2, imm=8
-                              ; encoding: 0x67090008
+                              ; opcode=18, cond=14, fld_a=1, fld_b=2, imm=8
+                              ; encoding: 0x97090008
 ```
 
 ---
 
-### BFINS — Bit-Field Insert (opcode 13, 0x0D)
+### BFINS — Bit-Field Insert (opcode 19, 0x13)
 
 ```
 Syntax:  BFINS DRd, DRs, #pos, #width
-Encoding: op[4:0]=0x0D | cond[4] | DRd[4] | DRs[4] | pos[5] | width[5] | 0[5]
+Encoding: op[4:0]=0x13 | cond[4] | DRd[4] | DRs[4] | pos[5] | width[5] | 0[5]
 ```
 
 Same imm15 layout as BFEXT: `imm15[9:5]` = pos, `imm15[4:0]` = width.
@@ -1141,17 +1145,17 @@ Flags reflect the **entire new value of DRd** (not just the inserted bits): N = 
 ```
 BFINS AL, DR2, DR3, #8, #4  ; pos=8, width=4
                               ; imm = (8 << 5) | 4 = 0x0104
-                              ; opcode=13, cond=14, fld_a=2, fld_b=3, imm=0x104
-                              ; encoding: 0x6F118104
+                              ; opcode=19, cond=14, fld_a=2, fld_b=3, imm=0x104
+                              ; encoding: 0x9F118104
 ```
 
 ---
 
-### MCMP — Integer Compare (opcode 14, 0x0E)
+### MCMP — Integer Compare (opcode 20, 0x14)
 
 ```
 Syntax:  MCMP DRd, DRs
-Encoding: op[4:0]=0x0E | cond[4] | DRd[4] | DRs[4] | 0[15]
+Encoding: op[4:0]=0x14 | cond[4] | DRd[4] | DRs[4] | 0[15]
 ```
 
 **Semantics:** Compute `DRd − DRs` and set condition flags. **No result register is written.** This is a pure flag-setting instruction.
@@ -1174,19 +1178,19 @@ The flag semantics match ISUB exactly (they share `_setSubFlags`). MCMP is the c
 ```
 MCMP AL, DR1, DR2        ; flags set from DR1 - DR2
 BRANCH EQ, equal_path    ; branch if Z=1 (DR1 == DR2)
-                          ; opcode=14, cond=14, fld_a=1, fld_b=2, imm=0
-                          ; encoding: 0x77090000
+                          ; opcode=20, cond=14, fld_a=1, fld_b=2, imm=0
+                          ; encoding: 0xA7090000
 ```
 
 ---
 
-### IADD — Integer Add (opcode 15, 0x0F)
+### IADD — Integer Add (opcode 21, 0x15)
 
 ```
 Syntax:  IADD DRd, DRs, DRt      (register form)
          IADD DRd, DRs, #k        (immediate form, 0 ≤ k ≤ 16383)
-Encoding (register): op[4:0]=0x0F | cond[4] | DRd[4] | DRs[4] | 0[11] | DRt[4]
-Encoding (immediate): op[4:0]=0x0F | cond[4] | DRd[4] | DRs[4] | 1[1] | k[14]
+Encoding (register): op[4:0]=0x15 | cond[4] | DRd[4] | DRs[4] | 0[11] | DRt[4]
+Encoding (immediate): op[4:0]=0x15 | cond[4] | DRd[4] | DRs[4] | 1[1] | k[14]
 ```
 
 `imm15[14] = 1` → immediate mode; `imm15[13:0]` = k (0–16383, unsigned).
@@ -1211,25 +1215,25 @@ Idioms enabled by DR0 = 0 (A.1):
 **Example:** Add DR1 and the constant 10, store in DR2.
 ```
 IADD AL, DR2, DR1, #10   ; immediate form: imm = 0x4000 | 10 = 0x400A
-                           ; opcode=15, cond=14, fld_a=2, fld_b=1, imm=0x400A
-                           ; encoding: 0x7F10C00A
+                           ; opcode=21, cond=14, fld_a=2, fld_b=1, imm=0x400A
+                           ; encoding: 0xAF10C00A
 ```
 
 Load immediate 42 into DR5:
 ```
 IADD AL, DR5, DR0, #42   ; DR0 = 0 always; result = 0 + 42 = 42
-                           ; encoding: 0x7F28000A... (imm=0x4000|42=0x402A)
+                           ; encoding: 0xAF28402A  (imm=0x4000|42=0x402A)
 ```
 
 ---
 
-### ISUB — Integer Subtract (opcode 16, 0x10)
+### ISUB — Integer Subtract (opcode 22, 0x16)
 
 ```
 Syntax:  ISUB DRd, DRs, DRt      (register form)
          ISUB DRd, DRs, #k        (immediate form, 0 ≤ k ≤ 16383)
-Encoding (register): op[4:0]=0x10 | cond[4] | DRd[4] | DRs[4] | 0[11] | DRt[4]
-Encoding (immediate): op[4:0]=0x10 | cond[4] | DRd[4] | DRs[4] | 1[1] | k[14]
+Encoding (register): op[4:0]=0x16 | cond[4] | DRd[4] | DRs[4] | 0[11] | DRt[4]
+Encoding (immediate): op[4:0]=0x16 | cond[4] | DRd[4] | DRs[4] | 1[1] | k[14]
 ```
 
 Immediate encoding identical to IADD: `imm15[14] = 1` → immediate, `imm15[13:0]` = k.
@@ -1249,18 +1253,18 @@ Idiom: `ISUB DRd, DR0, #1` → `DRd ← −1` (all-ones, 0xFFFFFFFF), since DR0 
 **Example:** Subtract 1 from the loop counter in DR3.
 ```
 ISUB AL, DR3, DR3, #1    ; DR3 ← DR3 - 1; sets Z=1 when DR3 reaches 0
-                           ; opcode=16, cond=14, fld_a=3, fld_b=3, imm=0x4001
-                           ; encoding: 0x831BC001
+                           ; opcode=22, cond=14, fld_a=3, fld_b=3, imm=0x4001
+                           ; encoding: 0xB719C001
 ```
 
 ---
 
-### BRANCH — Conditional PC-Relative Branch (opcode 17, 0x11)
+### BRANCH — Conditional PC-Relative Branch (opcode 23, 0x17)
 
 ```
 Syntax:  BRANCH[cond] #offset        (signed integer offset)
          BRANCH[cond] label           (assembler resolves to signed offset)
-Encoding: op[4:0]=0x11 | cond[4] | 0[4] | 0[4] | soff[15]
+Encoding: op[4:0]=0x17 | cond[4] | 0[4] | 0[4] | soff[15]
 ```
 
 `imm15` is interpreted as a **signed 15-bit offset** with bit 14 as the sign bit (see A.4):
@@ -1290,22 +1294,22 @@ Key offsets (see A.4):
 loop_top:
     ISUB AL, DR1, DR1, #1
     BRANCH NE, loop_top   ; soff = loop_top_word − branch_word (negative)
-                           ; cond=1 (NE), opcode=17
+                           ; cond=1 (NE), opcode=23
 ```
 
 Unconditional forward jump by 3 words:
 ```
-BRANCH AL, #3             ; opcode=17, cond=14, fld_a=0, fld_b=0, imm=3
-                           ; encoding: 0x8B000003
+BRANCH AL, #3             ; opcode=23, cond=14, fld_a=0, fld_b=0, imm=3
+                           ; encoding: 0xBF000003
 ```
 
 ---
 
-### SHL — Shift Left (opcode 18, 0x12)
+### SHL — Shift Left (opcode 24, 0x18)
 
 ```
 Syntax:  SHL DRd, DRs, #shamt     (0 ≤ shamt ≤ 31)
-Encoding: op[4:0]=0x12 | cond[4] | DRd[4] | DRs[4] | 0[10] | shamt[5]
+Encoding: op[4:0]=0x18 | cond[4] | DRd[4] | DRs[4] | 0[10] | shamt[5]
 ```
 
 `imm15[4:0]` = shift amount (5 bits, 0–31). `imm15[14:5]` must be 0.
@@ -1329,18 +1333,18 @@ Hardware confirmed: C is the last bit shifted out of DRs, gated on shamt > 0 (Ta
 
 **Example:** Shift DR2 left by 4, store in DR1.
 ```
-SHL AL, DR1, DR2, #4     ; opcode=18, cond=14, fld_a=1, fld_b=2, imm=4
-                           ; encoding: 0x97090004
+SHL AL, DR1, DR2, #4     ; opcode=24, cond=14, fld_a=1, fld_b=2, imm=4
+                           ; encoding: 0xC7090004
 ```
 
 ---
 
-### SHR — Shift Right (opcode 19, 0x13)
+### SHR — Shift Right (opcode 25, 0x19)
 
 ```
 Syntax:  SHR DRd, DRs, #shamt              (LSR — logical, zero-fill)
          SHR DRd, DRs, #shamt, ASR         (ASR — arithmetic, sign-extend)
-Encoding: op[4:0]=0x13 | cond[4] | DRd[4] | DRs[4] | 0[9] | mode[1] | shamt[5]
+Encoding: op[4:0]=0x19 | cond[4] | DRd[4] | DRs[4] | 0[9] | mode[1] | shamt[5]
 ```
 
 `imm15[4:0]` = shift amount (0–31). `imm15[5]` = mode select: 0 = LSR, 1 = ASR (see A.3).
@@ -1369,14 +1373,14 @@ Hardware deviation (D-12, **CLOSED**): the hardware previously implemented LSR o
 **Example:** Logical right shift DR2 by 3.
 ```
 SHR AL, DR1, DR2, #3     ; LSR, mode=0; imm = (0 << 5) | 3 = 0x03
-                           ; opcode=19, cond=14, fld_a=1, fld_b=2, imm=3
-                           ; encoding: 0x9F090003
+                           ; opcode=25, cond=14, fld_a=1, fld_b=2, imm=3
+                           ; encoding: 0xCF090003
 ```
 
 Arithmetic right shift DR2 by 3 (sign-preserving):
 ```
 SHR AL, DR1, DR2, #3, ASR   ; ASR, mode=1; imm = (1 << 5) | 3 = 0x23
-                               ; encoding: 0x9F090023
+                               ; encoding: 0xCF090023
 ```
 
 ---
