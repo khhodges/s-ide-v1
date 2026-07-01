@@ -501,13 +501,56 @@ def test_irq_dispatch_null_base():
 
 
 # ---------------------------------------------------------------------------
+# Sub-test 7: XLOADLAMBDA NULL-body condition  (DR0 = IRQ_REASON_LAZY_RESOLVE = 2)
+# ---------------------------------------------------------------------------
+
+def test_irq_dispatch_xloadlambda():
+    """XLOADLAMBDA NULL-body → same dispatch path as ELOADCALL.
+
+    Confirms that the symmetric XLOADLAMBDA case (cap_index as irq_slot)
+    recovers correctly via ChurchIRQDispatch:
+      DR0 = IRQ_REASON_LAZY_RESOLVE (2) — same reason code as ELOADCALL
+      DR1 = cap_index (lambda body offset supplied as irq_slot)
+      NIA = Scheduler.IRQ lump entry
+    """
+    dut = ChurchIRQDispatch()
+    LAMBDA_CAP_INDEX = 11   # fake cap_index from an XLOADLAMBDA instruction
+
+    async def testbench(ctx):
+        dr0_ok, dr1_ok, nia_ok, dr0_val, dr1_val, nia_val = (
+            await _run_dispatch(ctx, dut, IRQ_REASON_LAZY_RESOLVE, LAMBDA_CAP_INDEX)
+        )
+        assert dr0_ok, (
+            f"XLOADLAMBDA: DR0 write failed — expected reason={IRQ_REASON_LAZY_RESOLVE}, "
+            f"got dr_wr_data={dr0_val}"
+        )
+        assert dr1_ok, (
+            f"XLOADLAMBDA: DR1 write failed — expected cap_index={LAMBDA_CAP_INDEX}, "
+            f"got {dr1_val}"
+        )
+        assert nia_ok, (
+            f"XLOADLAMBDA: NIA wrong — expected {EXPECTED_NIA:#x}, got {nia_val:#x}"
+        )
+        print(f"  PASS: XLOADLAMBDA → DR0={dr0_val} (IRQ_REASON_LAZY_RESOLVE), "
+              f"DR1={dr1_val} (cap_index={LAMBDA_CAP_INDEX}), NIA={nia_val:#x}")
+
+    sim = Simulator(dut)
+    sim.add_clock(1e-6)
+    sim.add_testbench(testbench)
+    with sim.write_vcd("/dev/null"):
+        sim.run()
+    print("PASS: test_irq_dispatch_xloadlambda")
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
 def main():
     print("=" * 60)
     print("ChurchIRQDispatch Cross-Check Tests")
-    print("Three trigger conditions + simultaneous-trigger stall + null-base guard")
+    print("Three trigger conditions + simultaneous-trigger stall + null-base guard + XLOADLAMBDA")
+    print("→ dispatch to Scheduler.IRQ (NS slot 8)")
     print("=" * 60)
 
     tests = [
@@ -517,6 +560,7 @@ def main():
         test_irq_dispatch_simultaneous_fetch_ns,
         test_irq_dispatch_simultaneous_fetch_method,
         test_irq_dispatch_null_base,
+        test_irq_dispatch_xloadlambda,
     ]
     passed = 0
     failed = 0

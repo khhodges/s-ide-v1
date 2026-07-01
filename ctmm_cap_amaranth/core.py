@@ -77,19 +77,30 @@ class CMCapCore(Elaboratable):
         self.nia = Signal(32)
         self.flags = Signal(COND_FLAGS_LAYOUT)
 
-        # ELOADCALL lazy-resolve IRQ dispatch outputs.
-        # irq_valid is asserted for one cycle when an ELOADCALL fires after perm check passes.
-        # irq_reason = IRQ_REASON_LAZY_RESOLVE; irq_ns_slot = SCHEDULER_IRQ_NS_SLOT (8).
-        # irq_dr1 = c-list row (5 bits, rs2 field); irq_method_index = funct7 field (7 bits).
+        # IRQ dispatch outputs — two opcodes share IRQ_REASON_LAZY_RESOLVE and
+        # are both ORed into ChurchIRQDispatch.start in fpga_top.py.  They carry
+        # different slot contexts to DR1 so Scheduler.IRQ knows which stall to recover.
+        #
+        # ELOADCALL path (irq_valid):
+        #   Asserted for one cycle when ELOADCALL passes the E-perm check on CR_CLIST.
+        #   irq_reason = IRQ_REASON_LAZY_RESOLVE (constant).
+        #   irq_dr1 = c-list row (rs2 field, 5 bits) — the NULL GT slot to resolve.
+        #   irq_method_index = funct7 field (7 bits) — advisory stalled method index.
+        #
+        # XLOADLAMBDA path (xloadlambda_valid):
+        #   Asserted for one cycle when XLOADLAMBDA passes the X-perm check on CR_CLOOMC.
+        #   irq_reason = IRQ_REASON_LAZY_RESOLVE (same constant — symmetric case).
+        #   xloadlambda_index = cap_index field (12 bits) — lambda body offset.
+        #   No method index (DR2 = 0 on the XLOADLAMBDA path).
+        #
+        # Both signals are mutually exclusive (single-issue pipeline; different opcodes).
+        # fpga_top.py ORs them into dispatch.start and muxes irq_slot / method_index.
         self.irq_valid        = Signal()
         self.irq_reason       = Signal(4)
         self.irq_ns_slot      = Signal(8)
         self.irq_dr1          = Signal(5)
         self.irq_method_index = Signal(7)
 
-        # XLOADLAMBDA lambda-body-loader dispatch outputs.
-        # xloadlambda_valid is asserted for one cycle when XLOADLAMBDA fires after perm check.
-        # xloadlambda_index = cap_index (lambda body offset) from the instruction.
         self.xloadlambda_valid = Signal()
         self.xloadlambda_index = Signal(12)
 

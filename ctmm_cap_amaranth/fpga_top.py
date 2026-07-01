@@ -288,28 +288,48 @@ class CMCapFPGATop(Elaboratable):
         # -----------------------------------------------------------------------
         # Wire core IRQ outputs → dispatch inputs.
         #
-        # dispatch.irq_slot receives core.irq_dr1 (the c-list row of the NULL GT),
-        # NOT core.irq_ns_slot (which is always the constant SCHEDULER_IRQ_NS_SLOT=8).
-        # The dispatch writes irq_slot to DR1, so DR1 carries the recovery context
-        # (which c-list slot needs to be resolved) that Scheduler.IRQ needs.
+        # Two instructions share IRQ_REASON_LAZY_RESOLVE and route through the
+        # same ChurchIRQDispatch FSM:
+        #
+        #   ELOADCALL  (core.irq_valid):
+        #     Fires when an ELOADCALL passes the E-perm check on CR_CLIST.
+        #     dispatch.irq_slot = core.irq_dr1 (c-list row of the NULL GT).
+        #     DR2 receives irq_method_index (advisory: which method was stalled).
+        #
+        #   XLOADLAMBDA (core.xloadlambda_valid):
+        #     Fires when an XLOADLAMBDA passes the X-perm check on CR_CLOOMC.
+        #     A NULL lambda body silently stalls without this dispatch path.
+        #     dispatch.irq_slot = core.xloadlambda_index (lambda body cap_index).
+        #     DR2 = 0 (no method index — XLOADLAMBDA is not a method call).
+        #
+        # Both signals are one-cycle pulses that cannot overlap (they fire from
+        # mutually exclusive opcodes on a single-issue pipeline).
+        # dispatch.irq_slot receives the recovery context Scheduler.IRQ needs to
+        # resolve the stall; it is written to DR1 by the dispatch FSM.
         # -----------------------------------------------------------------------
         m.d.comb += [
-            dispatch.start.eq(core.irq_valid),
+            dispatch.start.eq(core.irq_valid | core.xloadlambda_valid),
             dispatch.irq_reason.eq(core.irq_reason[:2]),
-            dispatch.irq_slot.eq(core.irq_dr1),
+            dispatch.irq_slot.eq(
+                Mux(core.xloadlambda_valid, core.xloadlambda_index, core.irq_dr1)
+            ),
             dispatch.cr15_namespace.eq(core.cr15_namespace_out),
         ]
 
         # -----------------------------------------------------------------------
         # irq_method_index — advisory context for the handler.
-        # Latched from core.irq_method_index on the irq_valid pulse, then written
-        # to DR2 via core.irq_dispatch_dr2_wr_en when dispatch.complete fires.
-        # DR2 tells Scheduler.IRQ which method was stalled so it can retry the call
-        # after resolving the NULL c-list GT.
+        # Latched from core.irq_method_index on the irq_valid (ELOADCALL) pulse,
+        # then written to DR2 via core.irq_dispatch_dr2_wr_en when dispatch.complete
+        # fires.  DR2 tells Scheduler.IRQ which method was stalled so it can retry
+        # the call after resolving the NULL c-list GT.
+        # For XLOADLAMBDA, DR2 is latched as 0 — XLOADLAMBDA carries a cap_index
+        # (already in DR1 via irq_slot), not a method index.
         # -----------------------------------------------------------------------
         irq_method_index_lat = Signal(7)
         with m.If(core.irq_valid):
             m.d.sync += irq_method_index_lat.eq(core.irq_method_index)
+        with m.Elif(core.xloadlambda_valid):
+            m.d.sync += irq_method_index_lat.eq(0)
 
         m.d.comb += [
             core.irq_dispatch_dr2_wr_en.eq(dispatch.complete),
