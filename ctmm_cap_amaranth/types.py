@@ -154,14 +154,16 @@ class CMFunct3Arith(IntEnum):
 
 
 class ChurchOpcode(IntEnum):
-    LOAD    = 0b0000
-    SAVE    = 0b0001
-    CALL    = 0b0010
-    RETURN  = 0b0011
-    CHANGE  = 0b0100
-    SWITCH  = 0b0101
-    TPERM   = 0b0110
-    LAMBDA  = 0b0111
+    LOAD        = 0b0000
+    SAVE        = 0b0001
+    CALL        = 0b0010
+    RETURN      = 0b0011
+    CHANGE      = 0b0100
+    SWITCH      = 0b0101
+    TPERM       = 0b0110
+    LAMBDA      = 0b0111
+    ELOADCALL   = 0b1000
+    XLOADLAMBDA = 0b1001
 
 
 CHURCH_CUSTOM0 = 0b0001011

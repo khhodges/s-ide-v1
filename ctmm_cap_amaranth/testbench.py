@@ -1,9 +1,10 @@
 from amaranth import *
-from amaranth.sim import Simulator
+from amaranth.sim import Simulator, Settle
 
 from .types import *
 from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, COND_FLAGS_LAYOUT
 from .core import CMCapCore
+from .decoder import CMCapDecoder
 from .tperm import CMCapTperm
 from hardware.integrity32 import integrity32
 
@@ -35,9 +36,14 @@ def encode_ctmm_i(imm, rs1, funct3, rd, opcode):
 
 
 def encode_church(church_op, cr_dst=0, cr_src=0, index=0):
+    # church_op[2:0] → funct3 at bits[14:12]
+    # church_op[3]   → rd[4]  at bit[11]  (free: cr_dst only uses bits[10:7])
+    # Opcodes 0-7 (LOAD..LAMBDA): bit[11]=0, unchanged encoding.
+    # Opcodes 8-9 (ELOADCALL, XLOADLAMBDA): bit[11]=1, funct3=0 or 1.
     instr = CHURCH_CUSTOM0
     instr |= (cr_dst & 0xF) << 7
-    instr |= (church_op & 0x7) << 12
+    instr |= ((church_op >> 3) & 0x1) << 11   # church_op bit[3] → rd[4] = instr[11]
+    instr |= (church_op & 0x7) << 12           # church_op bits[2:0] → funct3
     instr |= (cr_src & 0xF) << 15
     instr |= (index & 0xFFF) << 20
     return instr
@@ -1401,8 +1407,156 @@ def test_tperm_frame_exact():
     print("PASS: test_tperm_frame_exact")
 
 
+def test_decoder_eloadcall_xloadlambda():
+    """Standalone decoder test: verify ELOADCALL (opcode 8) and XLOADLAMBDA (opcode 9)
+    decode correctly in CMCapDecoder.
+
+    Encoding scheme for opcodes >= 8:
+      - church_op[2:0] → funct3  at bits[14:12]
+      - church_op[3]   → rd[4]   at bit[11]   (cr_dst only uses bits[10:7])
+    ELOADCALL  (8 = 0b1000): bit[11]=1, funct3=0b000
+    XLOADLAMBDA(9 = 0b1001): bit[11]=1, funct3=0b001
+
+    ELOADCALL split-immediate mirrors hardware/decoder.py:
+      imm12[7:0]  (bits[27:20]) → eloadcall_row
+      imm12[11:8] (bits[31:28]) → eloadcall_method_index
+
+    Uses the generator-based add_process + Settle() API because CMCapDecoder is
+    purely combinatorial (no sync domain, so add_clock / async testbench cannot
+    be used).
+    """
+    dut = CMCapDecoder()
+    results = {}
+
+    # ── Test A: ELOADCALL (opcode 8) ─────────────────────────────────────────
+    # Encode: cr_dst=2, cr_src=3, imm12=0xA5C
+    #   row          = imm12[7:0]  = 0x5C = 92
+    #   method_index = imm12[11:8] = 0xA  = 10
+    EL_CR_DST = 2
+    EL_CR_SRC = 3
+    EL_IMM12  = 0xA5C   # method_index=0xA, row=0x5C
+    eloadcall_instr = encode_church(
+        int(ChurchOpcode.ELOADCALL), cr_dst=EL_CR_DST, cr_src=EL_CR_SRC, index=EL_IMM12
+    )
+
+    # ── Test B: XLOADLAMBDA (opcode 9) ────────────────────────────────────────
+    # Encode: cr_dst=5, cr_src=7, imm12=0x1F3 (lambda body offset)
+    XL_CR_DST = 5
+    XL_CR_SRC = 7
+    XL_IMM12  = 0x1F3
+    xlambda_instr = encode_church(
+        int(ChurchOpcode.XLOADLAMBDA), cr_dst=XL_CR_DST, cr_src=XL_CR_SRC, index=XL_IMM12
+    )
+
+    # ── Test C: backward-compat — LAMBDA (opcode 7) must still decode as 7 ───
+    lambda_instr_c = encode_church(int(ChurchOpcode.LAMBDA), cr_dst=1, cr_src=2)
+
+    def decoder_process():
+        # ── Test A ──
+        yield dut.instruction.eq(eloadcall_instr)
+        yield dut.instr_valid.eq(1)
+        yield Settle()
+        results['a'] = {
+            'church_op':             (yield dut.church_op),
+            'is_church_op':          (yield dut.is_church_op),
+            'is_eloadcall':          (yield dut.is_eloadcall),
+            'is_xloadlambda':        (yield dut.is_xloadlambda),
+            'eloadcall_row':         (yield dut.eloadcall_row),
+            'eloadcall_method_index':(yield dut.eloadcall_method_index),
+            'fault_valid':           (yield dut.fault_valid),
+            'cr_dst':                (yield dut.cr_dst),
+            'cr_src':                (yield dut.cr_src),
+        }
+
+        # ── Test B ──
+        yield dut.instruction.eq(xlambda_instr)
+        yield Settle()
+        results['b'] = {
+            'church_op':      (yield dut.church_op),
+            'is_church_op':   (yield dut.is_church_op),
+            'is_eloadcall':   (yield dut.is_eloadcall),
+            'is_xloadlambda': (yield dut.is_xloadlambda),
+            'fault_valid':    (yield dut.fault_valid),
+            'cr_dst':         (yield dut.cr_dst),
+            'cr_src':         (yield dut.cr_src),
+            'cap_index':      (yield dut.cap_index),
+        }
+
+        # ── Test C ──
+        yield dut.instruction.eq(lambda_instr_c)
+        yield Settle()
+        results['c'] = {
+            'church_op':      (yield dut.church_op),
+            'is_eloadcall':   (yield dut.is_eloadcall),
+            'is_xloadlambda': (yield dut.is_xloadlambda),
+        }
+
+    sim_dec = Simulator(dut)
+    sim_dec.add_process(decoder_process)
+    with sim_dec.write_vcd("/tmp/decoder_eloadcall_xloadlambda.vcd"):
+        sim_dec.run()
+
+    # ── Assert Test A ──
+    print("\n=== CMCapDecoder: ELOADCALL + XLOADLAMBDA Unit Tests ===")
+    a = results['a']
+    assert a['church_op'] == int(ChurchOpcode.ELOADCALL), (
+        f"ELOADCALL: church_op={a['church_op']}, expected {int(ChurchOpcode.ELOADCALL)}")
+    assert a['is_church_op'] == 1, (
+        f"ELOADCALL: is_church_op should be 1, got {a['is_church_op']}")
+    assert a['is_eloadcall'] == 1, (
+        f"ELOADCALL: is_eloadcall should be 1, got {a['is_eloadcall']}")
+    assert a['is_xloadlambda'] == 0, (
+        f"ELOADCALL: is_xloadlambda should be 0, got {a['is_xloadlambda']}")
+    assert a['eloadcall_row'] == 0x5C, (
+        f"ELOADCALL: eloadcall_row={a['eloadcall_row']:#04x}, expected 0x5c")
+    assert a['eloadcall_method_index'] == 0xA, (
+        f"ELOADCALL: eloadcall_method_index={a['eloadcall_method_index']:#03x}, expected 0xa")
+    assert a['fault_valid'] == 0, (
+        f"ELOADCALL: unexpected fault (fault_valid={a['fault_valid']})")
+    assert a['cr_dst'] == EL_CR_DST, (
+        f"ELOADCALL: cr_dst={a['cr_dst']}, expected {EL_CR_DST}")
+    assert a['cr_src'] == EL_CR_SRC, (
+        f"ELOADCALL: cr_src={a['cr_src']}, expected {EL_CR_SRC}")
+    print(f"  PASS A: ELOADCALL → church_op=8, is_eloadcall=1, "
+          f"row=0x{a['eloadcall_row']:02x}, method_index=0x{a['eloadcall_method_index']:x}, "
+          f"no fault")
+
+    # ── Assert Test B ──
+    b = results['b']
+    assert b['church_op'] == int(ChurchOpcode.XLOADLAMBDA), (
+        f"XLOADLAMBDA: church_op={b['church_op']}, expected {int(ChurchOpcode.XLOADLAMBDA)}")
+    assert b['is_church_op'] == 1, (
+        f"XLOADLAMBDA: is_church_op should be 1, got {b['is_church_op']}")
+    assert b['is_eloadcall'] == 0, (
+        f"XLOADLAMBDA: is_eloadcall should be 0, got {b['is_eloadcall']}")
+    assert b['is_xloadlambda'] == 1, (
+        f"XLOADLAMBDA: is_xloadlambda should be 1, got {b['is_xloadlambda']}")
+    assert b['fault_valid'] == 0, (
+        f"XLOADLAMBDA: unexpected fault (fault_valid={b['fault_valid']})")
+    assert b['cr_dst'] == XL_CR_DST, (
+        f"XLOADLAMBDA: cr_dst={b['cr_dst']}, expected {XL_CR_DST}")
+    assert b['cr_src'] == XL_CR_SRC, (
+        f"XLOADLAMBDA: cr_src={b['cr_src']}, expected {XL_CR_SRC}")
+    assert b['cap_index'] == XL_IMM12, (
+        f"XLOADLAMBDA: cap_index={b['cap_index']:#05x}, expected {XL_IMM12:#05x}")
+    print(f"  PASS B: XLOADLAMBDA → church_op=9, is_xloadlambda=1, "
+          f"cap_index=0x{b['cap_index']:03x}, no fault")
+
+    # ── Assert Test C ──
+    c = results['c']
+    assert c['church_op'] == int(ChurchOpcode.LAMBDA), (
+        f"LAMBDA backward-compat: church_op={c['church_op']}, expected 7")
+    assert c['is_eloadcall'] == 0 and c['is_xloadlambda'] == 0, (
+        "LAMBDA backward-compat: is_eloadcall/is_xloadlambda should both be 0")
+    print("  PASS C: LAMBDA (opcode 7) still decodes correctly, no cross-fire")
+
+    print("=== CMCapDecoder ELOADCALL + XLOADLAMBDA Tests PASSED ===")
+    print("PASS: test_decoder_eloadcall_xloadlambda")
+
+
 if __name__ == "__main__":
     test_msave_happy_path()
     test_mload_direct_mode()
     test_mload_msave_round_trip()
     test_tperm_frame_exact()
+    test_decoder_eloadcall_xloadlambda()

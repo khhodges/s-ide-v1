@@ -24,13 +24,22 @@ class CMCapDecoder(Elaboratable):
 
         self.is_ctmm_op = Signal()
         self.is_church_op = Signal()
-        self.church_op = Signal(3)
+        self.church_op = Signal(4)    # 4-bit: bit[3]=instr[11](rd[4]); bits[2:0]=funct3
         self.cr_dst = Signal(4)
         self.cr_src = Signal(4)
         self.cap_index = Signal(12)
         self.tperm_preset = Signal(4)
         self.call_mask = Signal(12)
         self.switch_target = Signal(4)
+
+        # ELOADCALL / XLOADLAMBDA decode outputs (mirrors hardware/decoder.py field names)
+        self.is_eloadcall       = Signal()
+        self.is_xloadlambda     = Signal()
+        # ELOADCALL split-immediate: imm12[7:0] = c-list row, imm12[11:8] = method index
+        # (mirrors native decoder: imm15[7:0]=row, imm15[14:8]=method_index; capped at 4
+        #  bits here because the RISC-V CUSTOM-0 immediate field is 12 bits, not 15)
+        self.eloadcall_row          = Signal(8)   # imm12[7:0]  — c-list row
+        self.eloadcall_method_index = Signal(4)   # imm12[11:8] — method index (4-bit in ctmm)
 
         self.fault = Signal(4)
         self.fault_valid = Signal()
@@ -92,14 +101,37 @@ class CMCapDecoder(Elaboratable):
             self.is_church_op.eq(is_custom0 & self.instr_valid),
         ]
 
+        # Church opcode: funct3 [14:12] carries the lower 3 bits; rd[4] = instr[11]
+        # carries bit 3.  Opcodes 0-7 (LOAD..LAMBDA): instr[11]=0.
+        # Opcodes 8-9 (ELOADCALL, XLOADLAMBDA): instr[11]=1, funct3=0 or 1 respectively.
+        # cr_dst uses only instr[10:7] (4 bits), so instr[11] is free for this purpose.
+        church_op_4b = Cat(instr[12:15], instr[11])
+
         m.d.comb += [
-            self.church_op.eq(instr[12:15]),
+            self.church_op.eq(church_op_4b),
             self.cr_dst.eq(instr[7:11]),
             self.cr_src.eq(instr[15:19]),
             self.cap_index.eq(Cat(instr[20:25], instr[25:32])),
             self.tperm_preset.eq(instr[20:24]),   # TODO: field is 4 bits; B-modifier (bit 4 of 5-bit preset) is decoded by the assembler and simulator but is NOT synthesised to silicon — hardware ignores bit 4 until the preset field is widened to 5 bits in a future revision
             self.call_mask.eq(Cat(instr[20:25], instr[25:32])),
             self.switch_target.eq(instr[20:24]),
+        ]
+
+        # ELOADCALL / XLOADLAMBDA per-opcode decode signals
+        m.d.comb += [
+            self.is_eloadcall.eq(
+                is_custom0 & self.instr_valid &
+                (church_op_4b == ChurchOpcode.ELOADCALL)
+            ),
+            self.is_xloadlambda.eq(
+                is_custom0 & self.instr_valid &
+                (church_op_4b == ChurchOpcode.XLOADLAMBDA)
+            ),
+            # Split-immediate for ELOADCALL: mirrors native imm15 field split
+            # (native: imm15[7:0]=row, imm15[14:8]=method_index)
+            # ctmm: imm12[7:0]=row (instr[27:20]), imm12[11:8]=method_index (instr[31:28])
+            self.eloadcall_row.eq(instr[20:28]),
+            self.eloadcall_method_index.eq(instr[28:32]),
         ]
 
         m.d.comb += [
