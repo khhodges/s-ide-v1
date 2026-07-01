@@ -333,10 +333,18 @@ def upload_ti60_hex():
         meta = {}
     meta["built_at"] = built_at
     meta["size_bytes"] = size
+    for field in ("git_sha", "git_date", "git_message", "firmware_version"):
+        val = request.form.get(field, "").strip()
+        if val:
+            meta[field] = val
     with open(json_path, "w") as _jf:
         json.dump(meta, _jf, indent=2)
-    app.logger.info("Ti60 hex uploaded: %d bytes at %s", size, built_at)
-    return jsonify({"ok": True, "size_bytes": size, "built_at": built_at})
+    app.logger.info("Ti60 hex uploaded: %d bytes at %s sha=%s", size, built_at,
+                    meta.get("git_sha", "?"))
+    return jsonify({"ok": True, "size_bytes": size, "built_at": built_at,
+                    "git_sha": meta.get("git_sha"), "git_date": meta.get("git_date"),
+                    "git_message": meta.get("git_message"),
+                    "firmware_version": meta.get("firmware_version")})
 
 @app.route("/upload/ti60-bit", methods=["POST"])
 def upload_ti60_bit():
@@ -385,6 +393,9 @@ def api_bitstream_status():
         "built_at": meta.get("built_at"),
         "firmware_version": meta.get("firmware_version"),
         "size_bytes": meta.get("size_bytes"),
+        "git_sha": meta.get("git_sha"),
+        "git_date": meta.get("git_date"),
+        "git_message": meta.get("git_message"),
     })
 
 

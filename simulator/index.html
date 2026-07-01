@@ -972,8 +972,22 @@
                         var meta = [];
                         if(d.size_bytes) meta.push((d.size_bytes/1048576).toFixed(1)+' MB');
                         if(d.firmware_version) meta.push('fw ' + d.firmware_version);
-                        if(d.built_at) meta.push('built ' + d.built_at.replace('T',' ').replace('Z',' UTC'));
-                        document.getElementById('ti60DlFlashMeta').textContent = meta.join(' \xb7 ');
+                        if(d.built_at){
+                            var bd = d.built_at.replace('T',' ').replace('Z','');
+                            meta.push('built ' + bd + ' UTC');
+                        }
+                        var metaEl = document.getElementById('ti60DlFlashMeta');
+                        metaEl.textContent = meta.join(' \xb7 ');
+                        if(d.git_sha){
+                            var commitLine = document.createElement('div');
+                            commitLine.style.cssText = 'margin-top:3px;font-size:0.78rem;color:#9ca3af;';
+                            var shaSpan = document.createElement('code');
+                            shaSpan.style.cssText = 'background:#0a0e17;padding:.1rem .3rem;border-radius:3px;color:#a78bfa;margin-right:.4rem;';
+                            shaSpan.textContent = d.git_sha;
+                            commitLine.appendChild(shaSpan);
+                            commitLine.appendChild(document.createTextNode(d.git_message || ''));
+                            metaEl.appendChild(commitLine);
+                        }
                         document.getElementById('ti60DlFlashPresent').style.display = '';
                     } else {
                         document.getElementById('ti60DlFlashAbsent').style.display = '';
