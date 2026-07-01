@@ -2,7 +2,10 @@
 # flash_and_monitor.sh — ONE command on the local machine (Chromebook/Penguin):
 #   download hex from droplet → start IDE bridge → flash Ti60 → open IDE dashboard
 #
-# Usage:
+# First time (repo not cloned yet) — use the IDE bootstrap URL:
+#   curl -sL https://lab.cloomc.org/dl/flash | bash
+#
+# After first clone — shortcut:
 #   bash ~/church-machine/hardware/soc_combined/flash_and_monitor.sh
 #
 # Override IDE URL:
@@ -12,6 +15,19 @@
 # (ChromeOS: Settings → Linux → Manage USB devices → enable FTDI device)
 
 set -euo pipefail
+
+# ── Self-bootstrap: pull latest before doing anything ─────────────────────────
+# Keeps the script current without a manual git pull.
+# Skip if _FM_BOOTSTRAPPED=1 (set by the re-exec below).
+if [ "${_FM_BOOTSTRAPPED:-0}" = "0" ]; then
+    _SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+    _ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    cd "$_ROOT"
+    git fetch origin --quiet
+    git reset --hard origin/main --quiet
+    export _FM_BOOTSTRAPPED=1
+    exec bash "$_SELF" "$@"
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

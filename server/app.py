@@ -416,6 +416,49 @@ def download_build_soc_cm_md():
     return resp
 
 
+@app.route("/dl/flash")
+def download_flash_bootstrap():
+    """Serve a bootstrap shell script that clones / updates the repo then runs flash_and_monitor.sh.
+
+    Usage (works even if the repo is not cloned yet):
+      curl -sL https://lab.cloomc.org/dl/flash | bash
+    """
+    script = r"""#!/bin/bash
+# Church Machine — Flash & Monitor bootstrap
+# Clones the repo if needed, updates it if present, then flashes the Ti60.
+#
+# First-time usage (repo not cloned):
+#   curl -sL https://lab.cloomc.org/dl/flash | bash
+#
+# Subsequent usage (shortcut once repo exists):
+#   bash ~/church-machine/hardware/soc_combined/flash_and_monitor.sh
+
+set -euo pipefail
+
+REPO="https://github.com/khhodges/church-machine.git"
+DIR="$HOME/church-machine"
+SCRIPT="$DIR/hardware/soc_combined/flash_and_monitor.sh"
+
+if [ ! -d "$DIR/.git" ]; then
+    echo "==> Cloning church-machine repo into $DIR ..."
+    git clone "$REPO" "$DIR"
+else
+    echo "==> Updating repo ..."
+    cd "$DIR"
+    git fetch origin
+    git reset --hard origin/main
+    echo "    Repo at: $(git log -1 --oneline)"
+fi
+
+echo ""
+exec bash "$SCRIPT" "$@"
+"""
+    resp = make_response(script, 200)
+    resp.headers["Content-Type"] = "text/plain; charset=utf-8"
+    resp.headers["Content-Disposition"] = 'inline; filename="flash_bootstrap.sh"'
+    return resp
+
+
 @app.route("/dl/ti60zip")
 def download_ti60zip():
     import zipfile, io, re as _re
