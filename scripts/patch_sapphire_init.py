@@ -70,12 +70,16 @@ def patch(content):
     # The inner group matches any mixture of:
     #   ram_symbolN[i] = 8'hXX;   (stub zeros or 8192-line inline)
     #   $readmemb("...", ram_symbolN);  (virgin or previously patched)
+    # Already patched with exactly the right bare-filename block — nothing to do.
+    if READMEMB_BLOCK in content:
+        return content, 0
+
     pat = re.compile(
         r'[ \t]*initial begin\n'
         r'(?:[ \t]*(?:'
         r'ram_symbol\d+\[\d+\] = 8\'h[0-9A-Fa-f]{2}'
-        r'|\$readmemb\("[^"]*ram_symbol[^"]*", ram_symbol\d+'
-        r'|\$readmemb\("[^"]+",\s*ram_symbol\d+'
+        r'|\$readmemb\("[^"]*ram_symbol[^"]*",\s*ram_symbol\d+\)'
+        r'|\$readmemb\("[^"]+",\s*ram_symbol\d+\)'
         r');\n)+'
         r'[ \t]*end',
         re.MULTILINE,
@@ -111,15 +115,18 @@ def main():
 
     new_content, n = patch(content)
 
-    with open(sapphire_path, "w") as f:
-        f.write(new_content)
-
-    delta = len(new_content) - original_len
-    print(
-        f"Patched {sapphire_path}  "
-        f"({n} block(s) replaced, {delta:+,} chars, {len(new_content):,} total)"
-    )
-    print(f"\nResult block:\n{READMEMB_BLOCK}\n")
+    if n == 0:
+        print(f"Already patched {sapphire_path} — $readmemb bare-filename block already present, no changes needed.")
+        print(f"\nResult block:\n{READMEMB_BLOCK}\n")
+    else:
+        with open(sapphire_path, "w") as f:
+            f.write(new_content)
+        delta = len(new_content) - original_len
+        print(
+            f"Patched {sapphire_path}  "
+            f"({n} block(s) replaced, {delta:+,} chars, {len(new_content):,} total)"
+        )
+        print(f"\nResult block:\n{READMEMB_BLOCK}\n")
     print(
         "Next steps:\n"
         "  1. Ensure symbol .bin files exist in hardware/soc_combined/ "
