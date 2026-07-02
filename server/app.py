@@ -757,20 +757,24 @@ def internal_git_sync():
     if not os.path.isfile(script):
         return jsonify({"success": False, "message": "sync-to-github.sh not found"}), 500
 
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     try:
         result = subprocess.run(
             ["bash", script],
             capture_output=True,
             text=True,
             timeout=180,
+            cwd=repo_root,
             env={**os.environ, "GITHUB_PAT": pat},
         )
         output = (result.stdout + result.stderr).strip()
         success = result.returncode == 0
         sha    = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
-                                capture_output=True, text=True).stdout.strip()
+                                capture_output=True, text=True,
+                                cwd=repo_root).stdout.strip()
         branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                                capture_output=True, text=True).stdout.strip()
+                                capture_output=True, text=True,
+                                cwd=repo_root).stdout.strip()
 
         # Parse per-repo outcomes from script output lines.
         # The script emits "push to <repo> succeeded." or "push to <repo> FAILED".

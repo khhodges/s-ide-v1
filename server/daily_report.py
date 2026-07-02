@@ -1198,12 +1198,14 @@ def run_code_sync():
     if not pat:
         log.warning("run_code_sync: GITHUB_PAT secret not set — skipping periodic code sync")
         return
+    repo_root = os.path.dirname(_BASE_DIR)
     try:
         result = subprocess.run(
             ["bash", script],
             capture_output=True,
             text=True,
             timeout=120,
+            cwd=repo_root,
             env={**os.environ, "GITHUB_PAT": pat},
         )
         output = (result.stdout + result.stderr).strip()
