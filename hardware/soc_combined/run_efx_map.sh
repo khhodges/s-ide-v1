@@ -63,13 +63,47 @@ mkdir -p "$SOC_DIR/work_syn"
 cd "$SOC_DIR"
 
 # ----------------------------------------------------------------
-# Step 0: CM DMEM BRAM patch
+# Step 0a: Firmware — compile and patch into sapphire.v BEFORE synthesis
+#
+# WHY HERE (not in run_efx_pnr.sh):
+#   efx_pnr uses --vdb_file top.vdb written by efx_map.  The VDB embeds
+#   BRAM INIT_ values at synthesis time; patching map.v afterward has no
+#   effect on the bitstream.  Firmware must be in sapphire.v before MAP.
+#
+# patch_sapphire_init.py replaces $readmemb / stub initial-begin blocks
+# with full 8192-word inline assignments so EFX_MAP propagates them to
+# EFX_RAM10 INIT_ parameters and the VDB carries the correct firmware.
+# ----------------------------------------------------------------
+echo "==> Step 0a: Building Sapphire firmware (make -C firmware clean all) ..."
+make -C "$SOC_DIR/firmware" clean all
+echo "    Done."
+echo ""
+
+FIRMWARE_BIN="$SOC_DIR/firmware/firmware.bin"
+echo "==> Step 0a: Generating Sapphire symbol bins from firmware ELF ..."
+python3 "$SCRIPT_DIR/../../scripts/gen_sapphire_symbol_bins.py" \
+    "$FIRMWARE_BIN" --out-dir "$SOC_DIR"
+echo "    Done."
+echo ""
+
+echo "==> Step 0a: Patching firmware into sapphire.v (patch_sapphire_init.py) ..."
+python3 "$SCRIPT_DIR/../../scripts/patch_sapphire_init.py" \
+    "$SOC_DIR/sapphire.v" \
+    "$SOC_DIR/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin" \
+    "$SOC_DIR/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin" \
+    "$SOC_DIR/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin" \
+    "$SOC_DIR/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin"
+echo "    Done."
+echo ""
+
+# ----------------------------------------------------------------
+# Step 0b: CM DMEM BRAM patch
 # EFX_MAP ignores Verilog 'initial begin' assignments on inferred arrays.
 # patch_cm_bram.py converts the dmem array to four byte-lane $readmemb
 # declarations and writes cm_dmem_b0..b3.bin into work_syn/ so MAP reads
 # the correct initial values.  Must run BEFORE efx_run.py.
 # ----------------------------------------------------------------
-echo "==> Step 0: Patching CM DMEM BRAM init (patch_cm_bram.py) ..."
+echo "==> Step 0b: Patching CM DMEM BRAM init (patch_cm_bram.py) ..."
 python3 "$SCRIPT_DIR/patch_cm_bram.py" "$SOC_DIR"
 echo "    Done."
 echo ""

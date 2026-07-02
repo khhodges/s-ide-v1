@@ -27,7 +27,7 @@
 - [Sapphire BRAM byte-store hang](sapphire-bram-byte-store-hang.md) — ANY sb to 0xF9007xxx hangs CPU; sha256.h/hkdf all use sb; precompute tokens or stub; only sw/lw safe in firmware
 - [top.res.csv wrong sync file](top-res-csv-backslash.md) — Interface Designer writes outflow/<circuit>.interface.csv NOT top.res.csv; top.res.csv is MAP resource report; passing it to efx_pnr crashes "unknown escape sequence" on \t
 - [CM DMEM Thread.caps[0] boot fix](cm-dmem-thread-caps.md) — DMEM word 125 = Thread.caps[0]; must be 0x4A000004 (E-GT→Salvation/NUC_PROGRAM slot 4); run_efx_map.sh now auto-calls patch_cm_bram.py before MAP
-- [Ti60 one-button build](ti60-one-button-build.md) — run_full_build.sh does git pull→firmware clean all→MAP→PNR→PGM→serve hex; all env vars baked in; firmware MUST be clean all (make skips after git pull due to equal timestamps)
+- [Ti60 one-button build](ti60-one-button-build.md) — firmware patch must happen in run_efx_map.sh BEFORE synthesis; patching map.v in PNR is ignored (PNR reads BRAM from top.vdb written by MAP)
 - [Boot namespace architecture rules](boot-namespace-rules.md) — 2 hardwired slots only; namespace liveness rule; authority = Abstract GT not NS entry; 3-layer boot model; SelfTest loop/CALL pattern
 - [Boot.Abstr token and filename migration](boot-abstr-token-migration.md) — slot 3→6, token 00000003→00000600; NS_TABLE_RESERVE 1024→4096 fix; canonical 00000600.lump must be kept alive by save_lump(); Python create_gt vs JS createGT use different bit layouts
 - [Simulator E2E boot-state testing](sim-e2e-boot-testing.md) — instantBoot() fails at B:04 (async fetch); slowBoot() blocked by bootAnimating; force sim.bootComplete=true; suppress #whatsNewModal via addInitScript

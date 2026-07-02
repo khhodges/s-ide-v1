@@ -97,56 +97,43 @@ if [ "$_SKIP_CONFIRM" -eq 0 ]; then
 fi
 
 # ── Step 1: Confirm repo state (bootstrap already synced above) ───────────────
-echo "==> [1/5] Repo synced — ${_GIT_SHA}: ${_GIT_MSG}"
+echo "==> [1/4] Repo synced — ${_GIT_SHA}: ${_GIT_MSG}"
 echo ""
 
-# ── Step 2: Firmware ──────────────────────────────────────────────────────────
-echo "==> [2/5] Firmware — compiling RISC-V firmware (~2 min)"
-echo "    Builds the Sapphire SoC firmware: call-home, fault telemetry, NIA polling."
-echo "    Always a clean rebuild to avoid git-pull timestamp traps."
-echo "    Output: firmware.elf → 4 × byte-lane .bin symbol files for the BRAM."
-echo ""
-make -C "$SOC_DIR/firmware" clean all
-echo "    Done."
-echo ""
-
-# ── Step 3: MAP — synthesis ───────────────────────────────────────────────────
-echo "==> [3/5] MAP — Efinity synthesis (~45 min)"
+# ── Step 2: MAP — synthesis (includes firmware build + sapphire.v patch) ─────
+echo "==> [2/4] MAP — Efinity synthesis (~45 min)"
 echo "    Translates all Verilog (Church Machine core + Sapphire SoC + glue) into"
 echo "    FPGA primitives (LUTs, FFs, BRAM, DSP) and places them on the Ti60 fabric."
 echo "    Sub-steps that run automatically inside this phase:"
-echo "      • patch_cm_bram.py   — rewrites CM DMEM to \$readmemb (EFX_MAP ignores"
-echo "                              initial begin blocks, so raw BRAM would be zeroed)"
-echo "      • XML param strip    — removes banned attrs (infer_clk_enable etc.) that"
-echo "                              cause EFX-0002 errors; Efinity re-injects them so"
-echo "                              we must strip before every compile"
-echo "    Output: work_syn/  (netlist, timing reports)"
+echo "      • make -C firmware clean all  — always forces a fresh firmware compile"
+echo "      • gen_sapphire_symbol_bins.py — firmware ELF → 4 byte-lane .bin files"
+echo "      • patch_sapphire_init.py      — patches sapphire.v with firmware bytes"
+echo "                                       BEFORE synthesis so the VDB bakes them in"
+echo "                                       (patching map.v afterward is ignored by PNR)"
+echo "      • patch_cm_bram.py            — rewrites CM DMEM to \$readmemb"
+echo "      • XML param strip             — removes banned attrs (infer_clk_enable etc.)"
+echo "    Output: work_syn/  (netlist, timing reports, top.vdb)"
 echo "    --- silence starts here (~45 min) ---"
 echo ""
 bash "$SOC_DIR/run_efx_map.sh"
 echo ""
 
-# ── Step 4: PNR — place & route ───────────────────────────────────────────────
-echo "==> [4/5] PNR — place & route (~30 min)"
+# ── Step 3: PNR — place & route ───────────────────────────────────────────────
+echo "==> [3/4] PNR — place & route (~30 min)"
 echo "    Assigns synthesised cells to exact FPGA sites, routes all signal wires,"
 echo "    and writes the bitstream image."
 echo "    Sub-steps that run automatically inside this phase:"
-echo "      • gen_sapphire_symbol_bins.py — firmware ELF → byte-lane .bin files"
-echo "                                       so the Sapphire BRAM is initialised"
-echo "                                       with the correct call-home firmware"
-echo "      • patch_mapv_init.py          — injects BRAM INIT_ constants into the"
-echo "                                       post-MAP netlist (Efinity 2026.1 emits"
-echo "                                       a stub initial begin with 4 zeros)"
-echo "      • Interface Designer           — applies IO pin placement from peri.xml"
-echo "      • efx_pnr                      — the actual place-and-route engine"
+echo "      • Interface Designer — applies IO pin placement from peri.xml"
+echo "      • efx_pnr            — the actual place-and-route engine"
+echo "                             (reads firmware from top.vdb, already baked by MAP)"
 echo "    Output: outflow/church_soc_cm.bit"
 echo "    --- silence starts here (~30 min) ---"
 echo ""
 bash "$SOC_DIR/run_efx_pnr.sh"
 echo ""
 
-# ── Step 5: PGM — bitstream hex ───────────────────────────────────────────────
-echo "==> [5/5] PGM — generate .hex bitstream (<2 min)"
+# ── Step 4: PGM — bitstream hex ───────────────────────────────────────────────
+echo "==> [4/4] PGM — generate .hex bitstream (<2 min)"
 echo "    Converts the .bit binary into the Intel HEX format that openFPGALoader"
 echo "    needs to flash the Ti60 F225 over USB-JTAG."
 echo "    Output: outflow/church_soc_cm.hex"
