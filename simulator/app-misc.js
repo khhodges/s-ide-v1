@@ -1482,7 +1482,7 @@ function loadGithubSyncStatus() {
     badge.className = 'gh-sync-badge unknown';
     if (meta) meta.textContent = '';
     if (btn) btn.classList.add('spinning');
-    fetch('/api/github/sync-status')
+    fetch('/api/github/sync-status?t=' + Date.now())
         .then(r => r.json())
         .then(d => {
             const ok = d.status === 'ok';

@@ -2989,11 +2989,16 @@ def github_sync_status():
     try:
         with open(status_path, "r") as f:
             data = json.load(f)
-        return jsonify(data)
+        resp = jsonify(data)
     except FileNotFoundError:
-        return jsonify({"status": "unknown", "branch": "", "sha": "", "error": "No sync recorded yet", "timestamp": None})
+        resp = jsonify({"status": "unknown", "branch": "", "sha": "", "error": "No sync recorded yet", "timestamp": None})
     except Exception as exc:
-        return jsonify({"status": "error", "error": str(exc), "branch": "", "sha": "", "timestamp": None}), 500
+        resp = jsonify({"status": "error", "error": str(exc), "branch": "", "sha": "", "timestamp": None})
+        resp.status_code = 500
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 @app.route("/api/github/community")
 def github_community():
