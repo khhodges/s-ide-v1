@@ -2,40 +2,40 @@
 """
 scripts/patch_sapphire_init.py
 
-Replace $readmemb calls (or existing inline assignments) in sapphire.v with
-explicit Verilog initial-block assignments so EFX_MAP can embed firmware bytes
-in the BRAM INITVAL_ parameters during synthesis.
+Patch the Sapphire SoC ROM initial block in sapphire.v to use $readmemb so
+EFX_MAP can embed firmware bytes in the synthesised BRAM.
 
-EFX_MAP on Efinix Titanium ignores $readmemb file references (treats them
-as simulation-only) but DOES honour explicit `mem[i] = N;` assignments in
-initial blocks.  Without this patch, the system_ramA appears zero-initialised
-to EFX_MAP, which then eliminates it entirely via optimize-zero-init-rom,
-leaving the CPU bus hardwired to 0 and the firmware never executing.
+EFX_MAP on Efinix Titanium IGNORES Verilog `initial begin` literal assignments
+on inferred arrays — they are treated as simulation-only and the BRAM init is
+left zeroed.  $readmemb with bare filenames (resolved relative to the project
+root, i.e. hardware/soc_combined/) IS propagated into BRAM INITVAL_ parameters
+during synthesis.  (The CM BRAM uses the same mechanism via patch_cm_bram.py.)
 
-The script handles two cases automatically:
-  1. Virgin sapphire.v  — contains $readmemb(...) calls; replaces each with
-                          inline assignments.
-  2. Already-patched    — inline assignments already present from a previous
-                          run; replaces them with fresh values from the
-                          current symbol files.
+The script replaces whatever is in the initial begin...end block that owns the
+four ram_symbol0..3 arrays with fresh $readmemb calls using the canonical
+bare filenames.  It handles all three states the file can be in:
+
+  1. Virgin sapphire.v   — initial begin with $readmemb (full path from IP gen)
+  2. Efinix 2026.1 stub  — initial begin with 4 zero assignments only
+  3. Already-patched     — initial begin with 8192 inline assignments per lane
+
+After patching, gen_sapphire_symbol_bins.py must have been run first so the
+four .bin files exist in hardware/soc_combined/ alongside sapphire.v.
 
 Usage (run from repo root):
     python3 scripts/patch_sapphire_init.py \\
         hardware/soc_combined/sapphire.v \\
-        hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin \\
-        hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin \\
-        hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin \\
-        hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin
+        [hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin ...]
 
-Or via Makefile shortcut (from hardware/soc_combined/):
-    make patch_sapphire
-
-The script edits sapphire.v in-place.  Re-run every time the firmware
-changes, then re-synthesise.
+The .bin path arguments are accepted for backward compatibility but ignored —
+EFX_MAP resolves $readmemb bare filenames relative to soc_combined/ (CWD of
+run_efx_map.sh).  Just make sure gen_sapphire_symbol_bins.py has been run
+first so the files exist.
 """
 
-import sys
 import re
+import sys
+
 
 SYMBOL_NAMES = [
     "EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin",
@@ -45,137 +45,87 @@ SYMBOL_NAMES = [
 ]
 RAM_VARS = ["ram_symbol0", "ram_symbol1", "ram_symbol2", "ram_symbol3"]
 
-
-def read_symbol_bin(path):
-    """
-    Read a $readmemb binary file.
-
-    Each non-empty, non-comment line is a binary string (e.g. "00010111")
-    representing one 8-bit word.  Returns list of int.
-    """
-    values = []
-    with open(path, "r") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("//") or line.startswith("@"):
-                continue
-            values.append(int(line, 2))
-    return values
-
-
-def gen_assignments(var_name, values):
-    """
-    Generate Verilog initial-block assignments for one byte lane.
-
-    Skips entries that are zero — EFX_RAM10 INIT_ defaults to 0,
-    so only non-zero bytes need explicit assignment.  Always emits the
-    very first entry (address 0) to prevent the whole block being
-    optimised away as empty.
-    """
-    lines = []
-    for i, v in enumerate(values):
-        if v != 0 or i == 0:
-            lines.append(f"        {var_name}[{i}] = 8'h{v:02X};")
-    return "\n".join(lines)
-
-
-def patch_lane(content, var, fname, assignments, lane_idx):
-    """
-    Replace either a $readmemb call or existing inline assignments for one lane.
-
-    Returns (new_content, method_used) where method_used is 'readmemb' or 'inline'.
-    Raises SystemExit if neither pattern is found.
-    """
-    # ── Case 1: virgin sapphire.v still has $readmemb ────────────────────────
-    # Match any path prefix before the filename (handles absolute paths like
-    # "/home/user/.../EfxSapphireSoc...bin" as well as bare filenames).
-    pattern_rmb = (
-        r'\$readmemb\("[^"]*'
-        + re.escape(fname)
-        + r'",'
-        + r'\s*'
-        + re.escape(var)
-        + r"\);"
+READMEMB_BLOCK = (
+    "  initial begin\n"
+    + "".join(
+        f'    $readmemb("{SYMBOL_NAMES[i]}", {RAM_VARS[i]});\n'
+        for i in range(4)
     )
-    new_content, n = re.subn(pattern_rmb, assignments, content)
-    if n > 0:
-        print(f"  Replaced $readmemb symbol{lane_idx} → {assignments.count(chr(10)) + 1} assignments")
-        return new_content, "readmemb"
+    + "  end"
+)
 
-    # ── Case 2: already-patched — inline assignments present ─────────────────
-    # Match one or more consecutive assignment lines for this variable,
-    # possibly with leading whitespace and any hex value.
-    pattern_inline = (
-        r"(?:[ \t]+"
-        + re.escape(var)
-        + r"\[\d+\] = 8'h[0-9A-Fa-f]{2};\n)+"
-    )
-    new_content, n = re.subn(pattern_inline, assignments + "\n", content)
-    if n > 0:
-        print(f"  Updated inline symbol{lane_idx} → {assignments.count(chr(10)) + 1} assignments  (was already-patched)")
-        return new_content, "inline"
 
-    # ── Neither found ─────────────────────────────────────────────────────────
-    print(
-        f"ERROR: neither $readmemb nor inline assignments for {var} found in sapphire.v",
-        file=sys.stderr,
+def patch(content):
+    """
+    Find and replace the initial begin...end block that initialises
+    ram_symbol0..3, returning (new_content, description_string).
+
+    Matches all three variants:
+      - one or more $readmemb lines referencing ram_symbol
+      - one or more ram_symbolN[...] = ... assignment lines
+    All are replaced with four $readmemb bare-filename calls.
+    """
+
+    # Single pattern that covers all three variants in one pass.
+    # The inner group matches any mixture of:
+    #   ram_symbolN[i] = 8'hXX;   (stub zeros or 8192-line inline)
+    #   $readmemb("...", ram_symbolN);  (virgin or previously patched)
+    pat = re.compile(
+        r'[ \t]*initial begin\n'
+        r'(?:[ \t]*(?:'
+        r'ram_symbol\d+\[\d+\] = 8\'h[0-9A-Fa-f]{2}'
+        r'|\$readmemb\("[^"]*ram_symbol[^"]*", ram_symbol\d+'
+        r'|\$readmemb\("[^"]+",\s*ram_symbol\d+'
+        r');\n)+'
+        r'[ \t]*end',
+        re.MULTILINE,
     )
-    print(
-        "  Possible causes:\n"
-        "    • sapphire.v is a different version of the Efinix IP\n"
-        "    • The ram variable is named differently in this version\n"
-        "    • The file was not generated by the Efinix Sapphire SoC IP\n"
-        "  Grep for 'ram_symbol' in sapphire.v to inspect the current state.",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+
+    new_content, n = pat.subn(READMEMB_BLOCK, content)
+    if n == 0:
+        print(
+            "ERROR: could not find the ram_symbol0..3 initial begin block in sapphire.v.\n"
+            "  Grep for 'ram_symbol' in sapphire.v to inspect the current state.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    return new_content, n
 
 
 def main():
-    if len(sys.argv) < 6:
+    if len(sys.argv) < 2:
         print(
-            "Usage: patch_sapphire_init.py sapphire.v "
-            "symbol0.bin symbol1.bin symbol2.bin symbol3.bin",
+            "Usage: patch_sapphire_init.py sapphire.v [symbol0.bin ...]\n"
+            "(bin paths are ignored — $readmemb bare filenames are used)",
             file=sys.stderr,
         )
         sys.exit(1)
 
     sapphire_path = sys.argv[1]
-    bin_paths = sys.argv[2:6]
-
-    lanes = []
-    for i, path in enumerate(bin_paths):
-        print(f"  Reading symbol{i}: {path} ...", end=" ", flush=True)
-        v = read_symbol_bin(path)
-        nonzero = sum(1 for x in v if x)
-        print(f"{len(v)} entries, {nonzero} non-zero")
-        lanes.append(v)
 
     with open(sapphire_path, "r") as f:
         content = f.read()
 
     original_len = len(content)
 
-    for i in range(4):
-        var = RAM_VARS[i]
-        fname = SYMBOL_NAMES[i]
-        assignments = gen_assignments(var, lanes[i])
-        content, _ = patch_lane(content, var, fname, assignments, i)
+    new_content, n = patch(content)
 
     with open(sapphire_path, "w") as f:
-        f.write(content)
+        f.write(new_content)
 
-    delta = len(content) - original_len
+    delta = len(new_content) - original_len
     print(
-        f"\nPatched {sapphire_path}  "
-        f"({delta:+,} chars, {len(content):,} total)"
+        f"Patched {sapphire_path}  "
+        f"({n} block(s) replaced, {delta:+,} chars, {len(new_content):,} total)"
     )
+    print(f"\nResult block:\n{READMEMB_BLOCK}\n")
     print(
-        "\nNext steps:\n"
-        "  1. bash work_syn/run_efx_map.sh   (re-synthesise)\n"
-        "  2. bash work_pnr/run_efx_pnr.sh   (place & route — generates .hex)\n"
-        "  3. sudo ~/oss-cad-suite/bin/openFPGALoader "
-        "-b titanium_ti60_f225_jtag -f outflow/church_soc_cm.hex\n"
+        "Next steps:\n"
+        "  1. Ensure symbol .bin files exist in hardware/soc_combined/ "
+        "(run gen_sapphire_symbol_bins.py if not)\n"
+        "  2. bash run_efx_map.sh   (re-synthesise — EFX_MAP will read the .bin files)\n"
+        "  3. bash run_efx_pnr.sh   (place & route)\n"
     )
 
 

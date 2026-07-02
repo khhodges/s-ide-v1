@@ -68,11 +68,15 @@ cd "$SOC_DIR"
 # WHY HERE (not in run_efx_pnr.sh):
 #   efx_pnr uses --vdb_file top.vdb written by efx_map.  The VDB embeds
 #   BRAM INIT_ values at synthesis time; patching map.v afterward has no
-#   effect on the bitstream.  Firmware must be in sapphire.v before MAP.
+#   effect on the bitstream.  Firmware must be baked in before MAP.
 #
-# patch_sapphire_init.py replaces $readmemb / stub initial-begin blocks
-# with full 8192-word inline assignments so EFX_MAP propagates them to
-# EFX_RAM10 INIT_ parameters and the VDB carries the correct firmware.
+# HOW: patch_sapphire_init.py inserts $readmemb bare-filename calls into
+#   sapphire.v.  gen_sapphire_symbol_bins.py writes the four lane .bin
+#   files into work_syn/ (EFX_MAP resolves $readmemb relative to its
+#   working directory, which is work_syn/ when --work_dir work_syn is
+#   used).  This mirrors exactly what patch_cm_bram.py does for the CM
+#   DMEM — bare $readmemb + files in work_syn/ is the only approach that
+#   survives into BRAM INITVAL_ parameters and the VDB.
 # ----------------------------------------------------------------
 echo "==> Step 0a: Building Sapphire firmware (make -C firmware clean all) ..."
 make -C "$SOC_DIR/firmware" clean all
@@ -80,19 +84,20 @@ echo "    Done."
 echo ""
 
 FIRMWARE_BIN="$SOC_DIR/firmware/firmware.bin"
-echo "==> Step 0a: Generating Sapphire symbol bins from firmware ELF ..."
+echo "==> Step 0a: Generating Sapphire symbol bins → work_syn/ ..."
+# Files MUST go into work_syn/ — EFX_MAP resolves bare $readmemb filenames
+# relative to --work_dir (work_syn/), not relative to the project root.
 python3 "$SCRIPT_DIR/../../scripts/gen_sapphire_symbol_bins.py" \
-    "$FIRMWARE_BIN" --out-dir "$SOC_DIR"
+    "$FIRMWARE_BIN" --out-dir "$SOC_DIR/work_syn"
 echo "    Done."
 echo ""
 
-echo "==> Step 0a: Patching firmware into sapphire.v (patch_sapphire_init.py) ..."
+echo "==> Step 0a: Patching sapphire.v with \$readmemb calls (patch_sapphire_init.py) ..."
 python3 "$SCRIPT_DIR/../../scripts/patch_sapphire_init.py" \
-    "$SOC_DIR/sapphire.v" \
-    "$SOC_DIR/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin" \
-    "$SOC_DIR/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin" \
-    "$SOC_DIR/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin" \
-    "$SOC_DIR/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin"
+    "$SOC_DIR/sapphire.v"
+echo "--- sapphire.v initial block (verification) ---"
+grep -A 6 'initial begin' "$SOC_DIR/sapphire.v" | grep -E 'readmemb|ram_symbol\[' | head -6
+echo "---"
 echo "    Done."
 echo ""
 
