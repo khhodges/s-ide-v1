@@ -286,10 +286,15 @@ def download_soc_patch_script():
     p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "scripts", "patch_sapphire_init.py")
     return send_file(os.path.abspath(p), as_attachment=True, download_name="patch_sapphire_init.py", mimetype="text/plain")
 
+_GITHUB_CM_REPO = "khhodges/church-machine"
+_GITHUB_HEX_PATH = "bitstreams/church_ti60_f225.hex"
+_GITHUB_RAW_HEX_URL = f"https://raw.githubusercontent.com/{_GITHUB_CM_REPO}/main/{_GITHUB_HEX_PATH}"
+
 @app.route("/dl/ti60-hex")
 def download_ti60_hex():
-    """Serve the pre-built Ti60 F225 bitstream hex as a binary download.
-    Returns 404 with a plain message if the file is absent."""
+    """Redirect to the latest Ti60 hex on GitHub (raw.githubusercontent.com).
+    Falls back to the local bitstreams/ copy if GitHub is unreachable."""
+    from flask import redirect as _redirect
     hex_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bitstreams", "church_ti60_f225.hex"))
     if not os.path.isfile(hex_path):
         resp = make_response(
@@ -299,19 +304,54 @@ def download_ti60_hex():
         )
         resp.headers["Content-Type"] = "text/plain"
         return resp
-    return send_file(
-        hex_path,
-        as_attachment=True,
-        download_name="church_ti60_f225.hex",
-        mimetype="application/octet-stream"
-    )
+    return _redirect(_GITHUB_RAW_HEX_URL, code=302)
+
+def _push_bitstream_to_github(meta):
+    """Background thread: git-commit the updated bitstreams/ files and push to GitHub."""
+    import threading as _threading
+    import subprocess as _sp
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    fw_ver  = meta.get("firmware_version", "?")
+    git_sha = meta.get("git_sha", "?")
+    commit_msg = f"chore: update Ti60 bitstream v{fw_ver} (droplet {git_sha})"
+
+    def _run():
+        try:
+            env = {**os.environ}
+            git = ["git", "-C", repo_root]
+            _sp.run(git + ["-c", "user.name=Church Machine IDE",
+                           "-c", "user.email=ide@cloomc.org",
+                           "add", "bitstreams/church_ti60_f225.hex",
+                                  "bitstreams/church_ti60_f225.json"],
+                    check=True, capture_output=True, env=env)
+            result = _sp.run(git + ["-c", "user.name=Church Machine IDE",
+                                    "-c", "user.email=ide@cloomc.org",
+                                    "commit", "-m", commit_msg],
+                             capture_output=True, env=env)
+            if result.returncode not in (0, 1):
+                app.logger.warning("Ti60 bitstream git commit failed: %s", result.stderr.decode())
+                return
+            if b"nothing to commit" in result.stdout + result.stderr:
+                app.logger.info("Ti60 bitstream push skipped — no changes vs HEAD")
+                return
+            sync_script = os.path.join(repo_root, "scripts", "sync-to-github.sh")
+            _sp.run(["bash", sync_script], check=False, env=env,
+                    cwd=repo_root, capture_output=False)
+            app.logger.info("Ti60 bitstream pushed to GitHub: %s", commit_msg)
+        except Exception as exc:
+            app.logger.warning("Ti60 bitstream GitHub push failed: %s", exc)
+
+    _threading.Thread(target=_run, daemon=True).start()
+
 
 @app.route("/upload/ti60-hex", methods=["POST"])
 def upload_ti60_hex():
-    """Accept a new Ti60 F225 hex bitstream upload and save it to bitstreams/.
+    """Accept a new Ti60 F225 hex bitstream upload, save it to bitstreams/,
+    then push it to GitHub so /dl/ti60-hex can redirect there.
 
-    Usage from Chromebook:
-      curl -X POST <ide-url>/upload/ti60-hex -F "file=@outflow/church_soc.hex"
+    Usage from the droplet:
+      curl -X POST <ide-url>/upload/ti60-hex -F "file=@outflow/church_soc_cm.hex" \\
+           -F firmware_version=2.4 -F git_sha=abc1234
     """
     import datetime as _dt
     if "file" not in request.files:
@@ -339,12 +379,14 @@ def upload_ti60_hex():
             meta[field] = val
     with open(json_path, "w") as _jf:
         json.dump(meta, _jf, indent=2)
-    app.logger.info("Ti60 hex uploaded: %d bytes at %s sha=%s", size, built_at,
-                    meta.get("git_sha", "?"))
+    app.logger.info("Ti60 hex uploaded: %d bytes at %s sha=%s — pushing to GitHub",
+                    size, built_at, meta.get("git_sha", "?"))
+    _push_bitstream_to_github(meta)
     return jsonify({"ok": True, "size_bytes": size, "built_at": built_at,
                     "git_sha": meta.get("git_sha"), "git_date": meta.get("git_date"),
                     "git_message": meta.get("git_message"),
-                    "firmware_version": meta.get("firmware_version")})
+                    "firmware_version": meta.get("firmware_version"),
+                    "github_hex_url": _GITHUB_RAW_HEX_URL})
 
 @app.route("/upload/ti60-bit", methods=["POST"])
 def upload_ti60_bit():
