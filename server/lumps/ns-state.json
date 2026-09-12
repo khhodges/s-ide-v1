@@ -166,36 +166,8 @@
       "limit": "0x00000",
       "seq": 0,
       "seal": "0x21523090"
-    },
-    {
-      "name": "New.CapTest",
-      "slot": 14,
-      "location": "0x00000000",
-      "type": "Inform",
-      "f": 0,
-      "g": 0,
-      "limit": "0x00000",
-      "seq": 0,
-      "seal": "0xDEADBEEF",
-      "symbolic": true,
-      "implementationMissing": true,
-      "resident": false
-    },
-    {
-      "name": "New.SelfTest",
-      "slot": 15,
-      "location": "0x00000000",
-      "type": "Inform",
-      "f": 0,
-      "g": 0,
-      "limit": "0x00000",
-      "seq": 0,
-      "seal": "0xDEADBEEF",
-      "symbolic": true,
-      "implementationMissing": true,
-      "resident": false
     }
   ],
-  "generated_at": 1789237844.4458246,
+  "generated_at": 1789256381.719682,
   "committed_raw_fingerprint": "d30401cd7830dd4645b2a7e1d9962ba71c44631fdfc7b3dbdcd63bda63aa59c2"
 }
