@@ -150,3 +150,4 @@
 - [Bootstrap repair archive discovery](bootstrap-repair-archive-discovery.md) — repair must accept both manifest-recorded archives and exact files discovered from the active LUMP's standard history filename pattern
 - [Compiler C-list normalization](compiler-clist-normalization.md) — finalized metadata drives operand rows; preserve concrete positions and investigate row-zero reports separately
 - [Embedded source frame sizing](embedded-source-frame-sizing.md) — allocate LUMPs for the complete API/source frame before placing the relocated c-list
+- [Namespace policy foundation boundary](ns-policy-foundation-boundary.md) — only slots 0–1 are foundational; catalog LUMPs at 6–10 may have Resident/Lazy policies

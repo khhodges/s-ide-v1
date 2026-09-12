@@ -176,9 +176,34 @@ class TestValidateStep2General:
         assert err is None, f"expected no error but got: {err!r}"
 
     def test_reserved_slot_rejected(self):
-        """NS slots 0-3 are foundational and cannot host a resident lump."""
+        """Foundational NS slots cannot host a resident lump."""
         step2 = {
             "lumps": [{"nsSlot": 0, "resident": True, "physAddr": 500, "lumpSize": 64}]
+        }
+        err = _validate_step2(step2, self._step1(), TI60_BOARD)
+        assert err is not None
+        assert "reserved" in err
+
+    def test_catalog_lump_slot_6_can_be_resident(self):
+        """SelfTest at slot 6 is a catalog LUMP, not a reserved MMIO slot."""
+        catalog_entry = dict(FAKE_CATALOG_ENTRY, nsSlot=6, abstraction="SelfTest")
+        with patch.object(_app_module, "_load_lump_catalog",
+                          return_value=[catalog_entry]):
+            step2 = {
+                "lumps": [{
+                    "nsSlot": 6,
+                    "resident": True,
+                    "physAddr": FOUNDATION_END,
+                    "lumpSize": LUMP_SIZE,
+                }]
+            }
+            err = _validate_step2(step2, self._step1(), TI60_BOARD)
+        assert err is None, f"expected slot 6 catalog LUMP to be valid: {err!r}"
+
+    def test_mmio_slot_2_remains_reserved(self):
+        """UART_DEV is an MMIO entry and cannot host a resident LUMP."""
+        step2 = {
+            "lumps": [{"nsSlot": 2, "resident": True, "physAddr": 500, "lumpSize": 64}]
         }
         err = _validate_step2(step2, self._step1(), TI60_BOARD)
         assert err is not None

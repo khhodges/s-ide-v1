@@ -3264,13 +3264,17 @@ MAX_NS_ENTRIES = _boot_image_gen.NAMESPACE_HEADER_V2_MAX_SLOTS
 # server/boot_image.py DEFAULT_ABSTRACTION_CATALOG.
 BASE_NAMED_NS_COUNT = 11
 
-# Slots reserved for the complete built-in catalog (foundational lumps and
-# device MMIO regions) — the programmer cannot place an additional lump here.
-# the programmer cannot place an additional resident lump body here.
+# Only foundational RAM entries and device/MMIO entries are ineligible for a
+# resident LUMP body.  Slots 6–10 are catalog LUMPs (SelfTest, WukongCallHome,
+# Tunnel, Ethernet, and CapabilityTest) and their load policies are valid
+# Step-2 choices even though they are part of the built-in catalog.
+#
 # Slots 0–1: Boot.NS, Boot.Thread (foundational RAM lumps).
-# Slots 2–5: UART_DEV, LED_DEV, BTN_DEV, TIMER_DEV (MMIO windows; NS entries
-#            point at physical hardware addresses, no lump body in RAM).
-RESERVED_NS_SLOTS = set(range(BASE_NAMED_NS_COUNT))
+# Slots 2–5: UART_DEV, LED_DEV, BTN_DEV, TIMER_DEV (MMIO windows).
+# Slot 13: M_BIT_DEV (Namespace-held I/O word).
+FOUNDATIONAL_NS_SLOTS = {0, 1}
+MMIO_NS_SLOTS = {2, 3, 4, 5, 13}
+RESERVED_NS_SLOTS = FOUNDATIONAL_NS_SLOTS | MMIO_NS_SLOTS
 
 
 def _generated_thread_slots_for_step1(step1):
