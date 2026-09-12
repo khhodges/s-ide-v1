@@ -79,10 +79,7 @@
       "token": "3b466efc",
       "filename": "SelfTest.1.a6d49276.lump",
       "issue_n": 1,
-      "resident": true,
-      "boot": true,
-      "lump_version": 85,
-      "load_policy": "Resident"
+      "resident": true
     },
     {
       "name": "WukongCallHome",
@@ -97,10 +94,7 @@
       "token": "4a000007",
       "filename": "WukongCallHome.1.9bf03976.lump",
       "issue_n": 1,
-      "resident": true,
-      "binary_hash": "dcfe96206305de8503bb6abbc813b4a67911423bd021cc876ec60e0c19b04eef",
-      "ns_slot_policy": "static",
-      "load_policy": "Resident"
+      "resident": true
     },
     {
       "name": "Tunnel",
@@ -138,8 +132,7 @@
       "filename": "CapabilityTest.1.ba638038.lump",
       "issue_n": 1,
       "resident": true,
-      "lump_version": 25,
-      "load_policy": "Resident"
+      "boot": true
     },
     {
       "name": "Thread.2",
@@ -201,19 +194,8 @@
       "symbolic": true,
       "implementationMissing": true,
       "resident": false
-    },
-    {
-      "name": "Policy.Probe",
-      "slot": 16,
-      "location": "0x00000C00",
-      "type": "Inform",
-      "f": 0,
-      "g": 0,
-      "limit": "0x00001",
-      "seq": 0,
-      "seal": "0xDEAB9EEF"
     }
   ],
-  "generated_at": 1789232842.5164921,
-  "committed_raw_fingerprint": "6cc25b0c39c9b2c083d1ca0c0fc65e85faef567cd9661b00cff5e0cf9e938d19"
+  "generated_at": 1789236196.8077805,
+  "committed_raw_fingerprint": "d30401cd7830dd4645b2a7e1d9962ba71c44631fdfc7b3dbdcd63bda63aa59c2"
 }

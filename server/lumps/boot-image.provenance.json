@@ -1,10 +1,10 @@
 {
-  "image_sha256": "f57c3f87c02204ccc4ae8317e90778aaf20b84a19d2a1b19c8befcbca1b72430",
+  "image_sha256": "969e38933848f5aef9466b968ef6e9d28d9c981d626b2121f3c1c141c075800e",
   "resident_bindings": [
     {
-      "artifact_sha256": "efa0e4323679355a530f0ce9bcf8cf19f962204bba7a45b543ca308f1ece17d7",
-      "filename": "SelfTest.80.f37bafd6.lump",
-      "localized_clist_sha256": "d07843a6ce6e1ca7cde0a7f2bcf2c0ec2e90ead4d0c63ffe9c33f33d3200f675",
+      "artifact_sha256": "3b142893afc59b9e2ec2561f5afc19c303fac9bd1b8bd7f752d0294f60601aea",
+      "filename": "SelfTest.1.a6d49276.lump",
+      "localized_clist_sha256": "a9ac4f3ca6c88fd6d2205ddc8b0bc9cd228408f7431ffeb3a12a389b35fdf4e5",
       "slot": 6
     },
     {
@@ -14,8 +14,8 @@
       "slot": 7
     },
     {
-      "artifact_sha256": "1ee2b6d937936d5261e3b00932bea2b8302fccd1ecb33011a98c998eb0cff26b",
-      "filename": "CapabilityTest.2.5e701b59.lump",
+      "artifact_sha256": "8d1c67961c6c5c338ff7c3ee5598aa425304fb49309000245966b9dc6d3ab10f",
+      "filename": "CapabilityTest.1.ba638038.lump",
       "localized_clist_sha256": "b008b67f55a75dab82fae1ded792b87fce6fccce371b1d62957b4919fecefcec",
       "slot": 10
     }

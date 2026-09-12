@@ -54,6 +54,7 @@
 - [Single-slot command ack correlation](single-slot-cmd-ack-correlation.md) — correlate queue/consume/ack/confirm stages by monotonic id, never by command letter; no time-window heuristics
 - [Wukong trace disassembly](wukong-trace-disassembly.md) — current packets carry NIA but no instruction word; exact labels/mnemonics require a matching source map or a versioned packet extension
 - [Wukong dev/production event relay](wukong-dev-production-relay.md) — local simulator previews need the production relay when the physical bridge is attached to lab.cloomc.org
+- [Wukong poll rejection containment](wukong-poll-rejection-containment.md) — async hardware polling must contain state-update failures, not only fetch failures
 - [Hardware snapshot separation](hardware-snapshot-separation.md) — hardware NIA/cursor and stored thread context must stay separate from simulator PC, live CR12, and breakpoints
 - [Boot fault register context](boot-fault-register-context.md) — boot mLoad diagnostics name the destination CR, not the executing abstraction's CR14
 - [Wukong bridge Windows support](wukong-windows-bridge.md) — use pyserial port enumeration so the same bridge supports COM ports natively without WSL

@@ -19967,6 +19967,7 @@ function _wukongHideStaleBanner() {
 // Poll for new trace packets every 500 ms (connection detection + CR update).
 // Also polls boot-info to show/hide the stale-bitstream banner.
 setInterval(async function _wukongPoll() {
+    try {
     const _pollWasConnected = _wukongIsConnected();
     try {
         await _wukongDrainEvents();
@@ -20024,6 +20025,14 @@ setInterval(async function _wukongPoll() {
             _wukongHideStaleBanner();
         }
     } catch(e) {}
+    } catch (_pollError) {
+        // This callback is async and is invoked by setInterval. Any exception
+        // outside the fetch guards would otherwise become an unhandled
+        // rejection and take down the IDE artifact runtime.
+        try {
+            console.warn('[Church Machine] Wukong poll update failed:', _pollError);
+        } catch (_) {}
+    }
 }, 500);
 
 // Fault-code table — must stay in sync with hardware.hw_types.FaultType and
