@@ -197,6 +197,14 @@ function _isResidentIORegister(slot, label) {
         labelName === 'M_BIT_DEV';
 }
 
+function _isFixedCatalogLumpSlot(slot, label) {
+    const contracts = (typeof globalThis !== 'undefined')
+        ? globalThis.ChurchArchitectureContracts : null;
+    const namedSlots = contracts && contracts.boot && contracts.boot.namedCatalogSlots;
+    if (!Array.isArray(namedSlots) || !namedSlots.includes(Number(slot))) return false;
+    return !_isBootstrapSlot(slot, label) && !_isResidentIORegister(slot, label);
+}
+
 function _nsSavedLoadPolicy(slot, manifest) {
     const valid = ['Empty', 'Resident', 'Preload', 'Lazy'];
     const cfg = window.bootConfig || {};
@@ -3274,11 +3282,28 @@ function updateNamespace() {
     };
 
     window._nsPrefetchChange = function(slot, value) {
-        // Only architecture-defined foundational and hardware slots are fixed.
-        // Every other occupied slot owns an editable saved load policy.
         const label = sim && sim.nsLabels ? sim.nsLabels[slot] : '';
         if (_isBootstrapSlot(slot, label) || _isResidentIORegister(slot, label)) return;
         const cfg = window.bootConfig || {};
+        const policy = ['Empty', 'Resident', 'Preload', 'Lazy'].includes(value)
+            ? value : 'Lazy';
+
+        // Fixed catalog LUMPs have boot-layout-owned physical addresses. Their
+        // policy belongs in slotRules, not step2.lumps, whose resident rows are
+        // user-placed bodies and therefore require physAddr.
+        if (_isFixedCatalogLumpSlot(slot, label)) {
+            cfg.slotRules = cfg.slotRules || {};
+            cfg.slotRules[String(slot)] = policy;
+            if (cfg.step2 && Array.isArray(cfg.step2.lumps)) {
+                cfg.step2.lumps = cfg.step2.lumps.filter(item =>
+                    !item || Number(item.nsSlot) !== Number(slot));
+            }
+            window._nsPrefetchDirty = true;
+            _setNsDirty(true);
+            updateNamespace();
+            return;
+        }
+
         if (!cfg.step2) cfg.step2 = { lumps: [] };
         if (!Array.isArray(cfg.step2.lumps)) cfg.step2.lumps = [];
         let row = cfg.step2.lumps.find(item => item && item.nsSlot === slot);
@@ -3293,7 +3318,7 @@ function updateNamespace() {
             };
             cfg.step2.lumps.push(row);
         }
-        row.loadPolicy = ['Empty', 'Resident', 'Preload', 'Lazy'].includes(value) ? value : 'Lazy';
+        row.loadPolicy = policy;
         row.resident = row.loadPolicy === 'Resident'; // legacy readers
         // Source metadata is catalog-owned.  The server fills any omitted
         // binding, but retain a cached catalog record when it is available so
@@ -3347,6 +3372,28 @@ function updateNamespace() {
                 });
         }
         const baseCfg = (serverData && (serverData.config || serverData.defaults)) || {};
+        const slotRules = Object.assign(
+            {},
+            baseCfg.slotRules || {},
+            localCfg.slotRules || {}
+        );
+        const rawStep2 = localCfg.step2 || baseCfg.step2 || { lumps: [] };
+        const step2Rows = [];
+        for (const row of (rawStep2 && Array.isArray(rawStep2.lumps)
+            ? rawStep2.lumps : [])) {
+            const slot = row && Number(row.nsSlot);
+            const label = row && (row.abstraction ||
+                (sim && sim.nsLabels && sim.nsLabels[slot]));
+            if (row && Number.isInteger(slot) && _isFixedCatalogLumpSlot(slot, label)) {
+                const rowPolicy = row.loadPolicy || row.load_policy ||
+                    (row.resident ? 'Resident' : (row.prefetch ? 'Preload' : 'Lazy'));
+                if (['Empty', 'Resident', 'Preload', 'Lazy'].includes(rowPolicy)) {
+                    slotRules[String(slot)] = rowPolicy;
+                }
+                continue;
+            }
+            step2Rows.push(row);
+        }
         const cfg = {
             targetBoard: localCfg.targetBoard || baseCfg.targetBoard || 'wukong-xc7a100t',
             bootEntrySlot: selectedBootEntry != null
@@ -3354,8 +3401,9 @@ function updateNamespace() {
                 : (Number.isInteger(localCfg.bootEntrySlot)
                     ? localCfg.bootEntrySlot
                     : (Number.isInteger(baseCfg.bootEntrySlot) ? baseCfg.bootEntrySlot : 6)),
+            slotRules,
             step1: localCfg.step1 || baseCfg.step1,
-            step2: localCfg.step2 || baseCfg.step2 || { lumps: [] },
+            step2: { lumps: step2Rows },
             step3: localCfg.step3 || baseCfg.step3 || { emptySlotCount: 0 }
         };
         if (!cfg.step1) {
@@ -3364,13 +3412,24 @@ function updateNamespace() {
         const response = await fetch('/api/boot-config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                targetBoard: cfg.targetBoard,
-                bootEntrySlot: cfg.bootEntrySlot,
-                step1: cfg.step1,
-                step2: cfg.step2 || { lumps: [] },
-                step3: cfg.step3 || { emptySlotCount: 0 }
-            })
+            body: JSON.stringify((() => {
+                const payload = {
+                    targetBoard: cfg.targetBoard,
+                    bootEntrySlot: cfg.bootEntrySlot,
+                    step1: cfg.step1,
+                    step2: cfg.step2 || { lumps: [] },
+                    step3: cfg.step3 || { emptySlotCount: 0 }
+                };
+                const hasLocalSlotRules = Object.prototype.hasOwnProperty.call(
+                    localCfg, 'slotRules');
+                const hasServerSlotRules = Object.prototype.hasOwnProperty.call(
+                    baseCfg, 'slotRules');
+                if (hasLocalSlotRules || hasServerSlotRules ||
+                        Object.keys(cfg.slotRules).length) {
+                    payload.slotRules = cfg.slotRules;
+                }
+                return payload;
+            })())
         });
         const body = await _actionableJsonResponse(
             response, 'Save the Namespace build configuration', {
