@@ -397,6 +397,19 @@
       "filename": "SelfTest.1.a6d49276.lump",
       "compiled_at": 1789231503.3886263,
       "identity_hash": "41a2785e87d5d0d23f73b6ff25d297af33e38e72e8dbbbbff4bb3f6adb309f25"
+    },
+    "8d1c67961c6c5c338ff7c3ee5598aa425304fb49309000245966b9dc6d3ab10f": {
+      "abstraction": "CapabilityTest",
+      "grants": [
+        "E"
+      ],
+      "capability_type": "inform",
+      "binary_hash": "8d1c67961c6c5c338ff7c3ee5598aa425304fb49309000245966b9dc6d3ab10f",
+      "dot_name": "CapabilityTest",
+      "issue_n": 1,
+      "filename": "CapabilityTest.1.ba638038.lump",
+      "compiled_at": 1789232842.4801483,
+      "identity_hash": "473e10b59da35e59c92b34ab1923b3d6cec3be829d69bb076fe4fd6cc6684c9c"
     }
   }
 }
