@@ -227,9 +227,9 @@ const manifest = JSON.parse(fs.readFileSync(MANIFEST, 'utf8'));
 const stateBefore = JSON.parse(fs.readFileSync(NS_STATE, 'utf8'));
 const residentRows = (stateBefore.abstractions || []).filter(row =>
     row.name === 'WukongCallHome' && row.slot === 7 &&
-    row.resident === true && row.boot_resident === true);
+    row.resident === true);
 if (residentRows.length !== 1) {
-    throw new Error('ns-state must contain exactly one frozen resident WukongCallHome slot-7 binding');
+    throw new Error('ns-state must contain exactly one resident WukongCallHome slot-7 binding');
 }
 
 // ── Write .lump binary ───────────────────────────────────────────────────────

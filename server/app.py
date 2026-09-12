@@ -7918,6 +7918,56 @@ def _parse_intrinsic_lump_content(words):
             "api_definition": api}
 
 
+def _content_frame_extent_error(words):
+    """Return a precise error when an 0xAB frame runs past its allocation.
+
+    Older LUMP builders sized the allocation from code/c-list words before
+    adding the embedded source frame.  Keep those artifacts inspectable, but
+    expose the real failure to save/preflight callers instead of collapsing it
+    into the generic "no embedded source" result.
+    """
+    if not words:
+        return None
+    header = words[0] & 0xFFFFFFFF
+    size = 1 << (((header >> 23) & 0xF) + 6)
+    cw, typ, cc = (header >> 10) & 0x1FFF, (header >> 8) & 3, header & 0xFF
+    start, end = 1 + cw, size - cc
+    if typ != 0 or start >= end or start >= len(words):
+        return None
+    frame_header = words[start] & 0xFFFFFFFF
+    flags, api_len = (frame_header >> 16) & 0xFF, frame_header & 0xFFFF
+    if (frame_header >> 24) != 0xAB:
+        return None
+    if flags not in {0x00, 0x01, 0x03, 0x05, 0x07}:
+        return (
+            f"embedded content frame has unsupported flags 0x{flags:02x}"
+        )
+    api_words = (api_len + 3) // 4
+    api_end = start + 1 + api_words
+    if not api_len:
+        return "embedded content frame has an empty API definition"
+    if api_end > end:
+        return (
+            "embedded content frame API bytes exceed the allocated freespace "
+            f"(needs through word {api_end - 1}, allocation ends at {end - 1})"
+        )
+    if not (flags & 1):
+        return None
+    source_length_index = api_end
+    if source_length_index >= end:
+        return "embedded content frame is missing its source length word"
+    source_len = words[source_length_index] & 0xFFFFFFFF
+    source_words = (source_len + 3) // 4
+    source_end = source_length_index + 1 + source_words
+    if source_end > end:
+        return (
+            "embedded source bytes exceed the allocated freespace "
+            f"(declares {source_len} bytes, needs through word {source_end - 1}, "
+            f"allocation ends at {end - 1})"
+        )
+    return None
+
+
 def _inspect_lump_binary(binary_or_path, *, allow_compact_fit=False):
     """Return intrinsic facts from one LUMP, or raise ValueError.
 
@@ -7956,6 +8006,7 @@ def _inspect_lump_binary(binary_or_path, *, allow_compact_fit=False):
             f"header regions exceed allocation: 1+cw({cw})+cc({cc}) > {declared_size}"
         )
     frame = _parse_intrinsic_lump_content(words)
+    content_frame_error = _content_frame_extent_error(words)
     content_profile = None
     if frame:
         content_profile = (
@@ -7976,6 +8027,7 @@ def _inspect_lump_binary(binary_or_path, *, allow_compact_fit=False):
         "sourceStorageTier": frame["tier"] if frame else None,
         "api_definition": frame["api_definition"] if frame else None,
         "source": frame["source"] if frame else None,
+        "content_frame_error": content_frame_error,
         "clist_entries": _extract_clist_from_words(words),
     }
 
@@ -10308,6 +10360,18 @@ def save_lump():
     # self-defining binary. Never commit metadata/source claims that disagree
     # with the immutable content frame.
     _intrinsic_content = _parse_intrinsic_lump_content(_sl_words)
+    _content_frame_error = _content_frame_extent_error(_sl_words)
+    if _content_frame_error:
+        return jsonify({
+            "error": (
+                "Save rejected: the embedded content frame is invalid: "
+                + _content_frame_error
+            ),
+            "content_frame_invalid": True,
+            "content_frame_error": _content_frame_error,
+            "committed": False,
+            "safe_retry": True,
+        }), 422
     _embedded_source = (
         _intrinsic_content.get("source")
         if isinstance(_intrinsic_content, dict) else None

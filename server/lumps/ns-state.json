@@ -97,7 +97,10 @@
       "token": "4a000007",
       "filename": "WukongCallHome.1.9bf03976.lump",
       "issue_n": 1,
-      "resident": true
+      "resident": true,
+      "binary_hash": "dcfe96206305de8503bb6abbc813b4a67911423bd021cc876ec60e0c19b04eef",
+      "ns_slot_policy": "static",
+      "load_policy": "Resident"
     },
     {
       "name": "Tunnel",

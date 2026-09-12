@@ -431,6 +431,37 @@ def test_source_required_rejects_api_only_binary_before_commit(isolated_lumps):
     assert not list(isolated_lumps.glob("*.lump"))
 
 
+def test_truncated_embedded_source_frame_reports_allocation_error(isolated_lumps):
+    """A frame that declares more source than its freespace must fail clearly."""
+    words = _words(cw=1, cc=1, marker=38)
+    api_bytes = b"{}"
+    words[2] = (0xAB << 24) | (0x01 << 16) | len(api_bytes)
+    words[3] = int.from_bytes(api_bytes.ljust(4, b"\0"), "big")
+    # The 64-word allocation only has 61 freespace words after the c-list.
+    # Declare substantially more source than can fit.
+    words[4] = 4096
+    with app_module.app.test_client() as client:
+        response = client.post("/api/lumps/save-plan", json={
+            "binary": words,
+            "metadata": {
+                "token": "7c501038",
+                "abstraction": "LumpSaveTest",
+                "content_type": "code",
+                "language": "assembly",
+                "capabilities": [],
+                "submitted_source": "source",
+                "source_required": True,
+            },
+        })
+    assert response.status_code == 422, response.get_data(as_text=True)
+    body = response.get_json()
+    assert body["content_frame_invalid"] is True
+    assert "exceed the allocated freespace" in body["content_frame_error"]
+    assert body["committed"] is False
+    assert body["safe_retry"] is True
+    assert not list(isolated_lumps.glob("*.lump"))
+
+
 def test_source_required_accepts_matching_embedded_source(isolated_lumps):
     source = "method Main { RETURN }"
     words = _words_with_source(source)

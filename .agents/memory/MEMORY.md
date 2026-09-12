@@ -10,8 +10,6 @@
 - [Sapphire ROM BRAM iBus/dBus conflict](sapphire-rom-bram-dbus-hang.md) — ROM BRAM single-port: iBus wins always; any dBus lw from ROM hangs; all firmware strings must be static char[] (.data/RAM)
 - [LUMP binary is big-endian](lump-binary-big-endian.md) — raw .lump file words are big-endian; ad-hoc LE reads/writes silently corrupt header/c-list, verify with lump-audit.js (also in CM_LUMP_SPECIFICATION.md §Developer Traps)
 - [Shared fetch dedup for concurrent UI lookups](shared-fetch-dedup-for-concurrent-ui-lookups.md) — two independent render paths fetching the same detail endpoint for the same entity will double-fire it; dedupe via shared in-flight-promise cache
-- [Public code search allowlist](public-code-search-allowlist.md) — landing search may expose only allowlisted text source roots/extensions through the escaped code viewer, never arbitrary workspace paths
-- [Post-mutation comparison caches](post-mutation-comparison-caches.md) — a successful push or sync must invalidate its derived comparison cache before the UI refreshes
 - [Dev server port collision](dev-server-port-collision.md) — check-then-act "free port then bind" isn't race-proof between two independently-starting servers; give secondary servers their own default port + retry-with-backoff on bind
 - [EFX_MAP $readmemb path resolution + VDB caching](efx-map-readmemb.md) — bins must be in $SOC_DIR/ (not just work_syn/); 2026.1 MAP leaves INIT_0=all-FF in map.v (placeholder); PNR resolves $readmemb
 - [Sapphire BRAM init — Variant B stub block](sapphire-bram-init-variant.md) — Efinity 2026.1 IP has stub initial begin (4 zeros) not $readmemb; depth=8192 words; patch_sapphire_init.py handles both variants
@@ -71,7 +69,6 @@
 - [T7 freespace self-definition format](t7-freespace-format.md) — embedded API JSON must never carry token/issue (circular hash / identity rule); Mint validates framing only
 - [Lump V1.3 self-defining freespace](lump-v13-self-definition.md) — 0xAB frame at word cw+1 (API JSON + optional source); JS/Python emitters must stay in lockstep; compile cache key must include tier
 - [Boot-suite test isolation](boot-suite-triage-clusters.md) — destructive tests on shared live dirs need a cross-process write lock or temp-dir isolation, not snapshot/restore alone; bulk-failure triage needs reconciled per-cluster F/E counts
-- [Case-insensitive metadata aliases](case-insensitive-metadata-aliases.md) — case-equivalent registry aliases must update atomically; diagnostics dedupe only within one source location
 - [Direct LUMP call selector](direct-lump-call-selector.md) — single-entry LUMPs whose first code word is executable must use selector 0, never method-table selector 1
 - [Declared C-list B-flag rule](declared-clist-b-flag-rule.md) — declared capability rows must use B=0; browser and server validators must reject B-set Inform tokens consistently
 - [Canonical T vs lookup aliases](canonical-t-vs-lookup-aliases.md) — historical LUMP tokens may locate bytes, but only recomputed canonical T may populate W3 or drive promotion
@@ -124,25 +121,19 @@
 - [Bridge-causal retirement gates](bridge-causal-retirement-gates.md) — UART write→retirement proofs must use bridge-side counters, not server receive order
 - [Board-state acknowledgement correlation](board-state-ack-correlation.md) — state-changing UART acknowledgements need a request nonce, atomic receive, and bounded partial-frame recovery
 - [M-bit I/O object](m-bit-io-object.md) — one Namespace-held 32-bit I/O word; bits 0–15 map CR0.M–CR15.M and full-word writes set/clear all bits
-- [Browser resource-error containment](browser-resource-error-containment.md) — malformed/resource window errors must be intercepted in capture phase before the artifact crash monitor
 - [Wukong one-shot Skip Fault](wukong-skip-fault-protocol.md) — explicit post-snapshot skip needs authenticated FPGA-sequence proof; lost correlation requires reboot
 - [LUMP output profile stability](lump-output-profile-stability.md) — persist API/Compact/Full per abstraction; allocation changes reflect embedded content, not code size alone
 - [LUMP save vs boot rebuild](lump-save-boot-rebuild-boundary.md) — an approved LUMP save must not roll back because an unchanged boot-image dependency cannot rebuild
-- [Static client cache busting](static-client-cache-busting.md) — bump pinned simulator script versions when client code changes or the preview may keep stale UI
-- [Pet-name rebuild independence](pet-name-rebuild-independence.md) — dependency-first LUMP rebuild order is temporary; Pet Names should allow consumers to rebind without recompiling last
 - [SelfTest dynamic allocation](selftest-dynamic-allocation.md) — SelfTest authority comes from one active manifest+NS binding; size, slot, sequence, and resident layout are never legacy constants
 - [C-List picker programmer authority](clist-picker-programmer-authority.md) — capability declarations may use live, committed, library-only, or not-yet-created pet names
 - [Saved LUMP binary authority](saved-lump-binary-authority.md) — after save, evict code-only memory words so the immutable server binary supplies embedded source
 - [Starter handoff must be acyclic](starter-handoff-acyclic.md) — startup SelfTest hands off once; Starter must continue onward, never call SelfTest back
-- [Quiet hardware loops are not freezes](quiet-hardware-loops-not-freezes.md) — stale trace age alone cannot prove a running Wukong stalled; only causal command expectations may time out
 - [Trace row correlation](trace-row-correlation.md) — combine NIA symbols and raw words only after identity validation; conflicts must remain visibly unresolved
-- [Inform MMIO simulation](inform-mmio-simulation.md) — canonical device capabilities use architectural addresses outside RAM and must route through device state, not RAM bounds
 - [Pending compile ownership](pending-compile-ownership.md) — delayed simulator loads consume the exact immutable compile snapshot that initiated them, never mutable registry selection
 - [Namespace header boot fallback](namespace-header-boot-fallback.md) — a missing selected dynamic boot slot must not crash reset; header falls back to a resident canonical entry
 - [Resident image binding validation](resident-image-binding-validation.md) — compare immutable artifact payload plus slot/sequence/allocation; c-list rows are destination-localized
 - [Localized c-list provenance](localized-clist-provenance.md) — bind generated images to both selected artifact hashes and resulting localized capability rows
 - [Editor source authority](editor-source-authority.md) — persisted sources reopen from current authority; divergent browser buffers remain explicit recoverable drafts
-- [Thread selection vs live ownership](thread-selection-vs-live-ownership.md) — a selected slot may coexist with reset scratch banks; only boot or successful restore establishes ownership
 - [C-list row zero advisory SELF](clist-row-zero-advisory-self.md) — new C-lists start with SELF; existing owner-token mismatches warn only and preserve programmer data
 - [Latest saved LUMP selection](latest-saved-lump-selection.md) — live identity stays exact, while editor and Run choose the newest saved revision even if history-marked
 - [Trace-symbol preview isolation](trace-symbol-preview-isolation.md) — invalid factory artifacts must block hardware builds without taking down the web IDE’s fallback trace labels
@@ -157,3 +148,4 @@
 - [LUMP History active selection](lump-history-active-selection.md) — selection or bootstrap correction creates a new approved live revision; immutable evidence is never edited
 - [Bootstrap repair archive discovery](bootstrap-repair-archive-discovery.md) — repair must accept both manifest-recorded archives and exact files discovered from the active LUMP's standard history filename pattern
 - [Compiler C-list normalization](compiler-clist-normalization.md) — finalized metadata drives operand rows; preserve concrete positions and investigate row-zero reports separately
+- [Embedded source frame sizing](embedded-source-frame-sizing.md) — allocate LUMPs for the complete API/source frame before placing the relocated c-list
