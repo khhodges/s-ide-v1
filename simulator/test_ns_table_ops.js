@@ -21,6 +21,7 @@
 //   T411 — Boot (sim.reset()) after Add (no Clear): boot slots 0–6 are intact
 //   T412 — After Boot, allocOrFindNsSlot returns first user slot
 //   T413 — _nsTableClear guards: slots 0–10 are rejected
+//   T425 — Clear removes symbolic slots 14 and 15 without redraw rehydration
 
 const vm   = require('vm');
 const fs   = require('fs');
@@ -119,6 +120,34 @@ function callNsTableClear(simInst, slot) {
     });
     vm.runInContext(nsTableClearSrc, sandbox);
     vm.runInContext(`_nsTableClear(${slot});`, sandbox);
+}
+
+function callNsTableClearWithHydration(simInst, slots) {
+    const nsState = {
+        abstractions: slots.map(slot => ({
+            name: `Future.Service${slot}`,
+            slot,
+            seq: 0,
+            symbolic: true,
+            implementationMissing: true,
+            resident: false,
+        })),
+    };
+    const sandbox = vm.createContext({
+        sim: simInst,
+        window: { _nsState: nsState },
+        _setNsDirty: function() {},
+        updateNamespace: function() {},
+    });
+    vm.runInContext(hydrateSymbolicSrc, sandbox);
+    sandbox.updateNamespace = function() {
+        vm.runInContext('_hydrateNsSymbolicState();', sandbox);
+    };
+    vm.runInContext(nsTableClearSrc, sandbox);
+    for (const slot of slots) {
+        vm.runInContext(`_nsTableClear(${slot});`, sandbox);
+    }
+    return sandbox;
 }
 
 // ── T401–T402: Add LUMP to slot 7 ────────────────────────────────────────────
@@ -339,6 +368,18 @@ function callNsTableClear(simInst, slot) {
         snapBefore[6].w1 === snapAfter[6].w1 &&
         snapBefore[6].w2 === snapAfter[6].w2,
         `w0: ${snapBefore[6].w0.toString(16)} → ${snapAfter[6].w0.toString(16)}`);
+}
+
+{
+    const sim = makeSim();
+    sim.defineSymbolicAbstraction('Future.Service14', 14);
+    sim.defineSymbolicAbstraction('Future.Service15', 15);
+    const sandbox = callNsTableClearWithHydration(sim, [14, 15]);
+    check('T425: clearing symbolic slots 14 and 15 survives Namespace redraw',
+        !sim.isNSEntryValid(14) && !sim.isNSEntryValid(15) &&
+        !sim.symbolicEntryAt(14) && !sim.symbolicEntryAt(15) &&
+        sandbox.window._nsState.abstractions.length === 0,
+        `valid14=${sim.isNSEntryValid(14)}, valid15=${sim.isNSEntryValid(15)}`);
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────

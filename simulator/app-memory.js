@@ -4532,6 +4532,21 @@ function _nsTableClear(slot) {
         sim.clearNSEntry(slot);
     });
 
+    // Symbolic entries are hydrated from the last committed ns-state snapshot
+    // during every Namespace redraw. Remove the cleared slot from that local
+    // snapshot too, otherwise updateNamespace() immediately recreates it after
+    // clearNSEntry() has correctly removed the live entry. This remains staged
+    // in the browser until _nsTableSave commits the updated snapshot; a page
+    // reload before Save should intentionally restore the server state.
+    if (typeof window !== 'undefined' && window._nsState &&
+            Array.isArray(window._nsState.abstractions)) {
+        window._nsState = Object.assign({}, window._nsState, {
+            abstractions: window._nsState.abstractions.filter(function(row) {
+                return !row || Number(row.slot) !== Number(slot);
+            }),
+        });
+    }
+
     _setNsDirty(true);
     if (typeof updateNamespace === 'function') updateNamespace();
 }
