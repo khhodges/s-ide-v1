@@ -79,9 +79,19 @@ Saves the GT in CRs (source GT, B=1 required) to the c-list pointed to by CRd (d
 
 ```
 CALL CRs [, #method_index]
+CALL CR6[PetName] [, #method_index]
 ```
 
-Enters the abstraction identified by the E-GT in CRs. CALL pushes **2 words** onto the call stack:
+The first form enters the abstraction identified by the E-GT in `CRs`. The
+`CR6[PetName]` form looks up `PetName` in the caller's active c-list rooted at
+`CR6`, selects the GT in the matching c-list row, and enters the abstraction
+identified by that GT. The pet name identifies a c-list row/GT; it does not
+refer to the callee's runtime `CR6`.
+
+Both forms select the same kind of E-GT and accept the same optional
+`#method_index`. After the call succeeds, the callee's c-list replaces `CR6`
+as the callee's inherited execution context, as described below. CALL pushes
+**2 words** onto the call stack:
 - **Word 0** — the caller's E-GT (used by RETURN to revalidate and re-derive CR6/CR14)
 - **Word 1** — NIA (return offset) | packed machine indicators
 
